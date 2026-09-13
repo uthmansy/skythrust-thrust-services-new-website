@@ -932,7 +932,7 @@ export default function CharterSection() {
     >
       {/* ============ MOBILE TREE ============ */}
       <div className="md:hidden relative">
-        <div className="sticky top-0 h-screen z-0 pointer-events-none">
+        <div className="overflow-hidden sticky top-0 h-screen z-0 pointer-events-none">
           <CharterBackdrop />
           <CharterHUD />
         </div>
