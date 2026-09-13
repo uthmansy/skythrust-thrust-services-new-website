@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -12,30 +18,38 @@ const useIsomorphicLayoutEffect =
 /* ============================================================
    DATA
    ============================================================ */
-const INVENTORY = [
+const CATEGORIES = [
   {
     n: "01",
     title: "Consumables",
+    tag: "Fast-moving",
+    count: "4,200",
+    img: "/assets/spares/grid-wheel.webp",
     desc: "Aircraft tires, carbon brake pads, hydraulic fluids, engine oils, filters, lubricants.",
-    chip: "Fast-moving",
   },
   {
     n: "02",
     title: "Hardware",
+    tag: "Certified",
+    count: "3,100",
+    img: "/assets/spares/grid-avionics.webp",
     desc: "Precision fasteners, bolts, nuts, rivets, bearings, seals, gaskets, oxygen components.",
-    chip: "Certified",
   },
   {
     n: "03",
     title: "Chemicals",
+    tag: "Safety-rated",
+    count: "1,600",
+    img: "/assets/spares/grid-cargo.webp",
     desc: "Cleaning agents, degreasers, solvents, corrosion inhibitors, sealants, touch-up paint.",
-    chip: "Safety-rated",
   },
   {
     n: "04",
     title: "Rotables",
+    tag: "Managed LRU",
+    count: "1,500",
+    img: "/assets/spares/grid-hero-shelves.webp",
     desc: "Hydraulic pumps, fuel control units, avionics modules, actuators, valves, pneumatics.",
-    chip: "Managed LRU",
   },
 ];
 
@@ -43,17 +57,17 @@ const AOG_STEPS = [
   {
     n: "01",
     title: "Cross-reference",
-    desc: "Instant inventory lookup across all hubs.",
+    desc: "Instant lookup across all hubs.",
   },
   {
     n: "02",
     title: "Priority allocate",
-    desc: "On-hand stock reserved for immediate dispatch.",
+    desc: "On-hand stock reserved for dispatch.",
   },
   {
     n: "03",
     title: "Expedite freight",
-    desc: "Direct courier, hand-carry, or chartered movement.",
+    desc: "Courier, hand-carry, or chartered.",
   },
   {
     n: "04",
@@ -62,235 +76,348 @@ const AOG_STEPS = [
   },
 ];
 
-const CERTS = ["FAA 8130-3", "EASA Form 1", "Manufacturer C of C"];
 const JOURNEY = ["Sourcing", "Export", "NCS", "Tarmac"];
 
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const clamp01 = (t: number) => Math.max(0, Math.min(1, t));
+const rangeP = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
+
+/* Scroll choreography milestones (of overall section progress) */
+const M = {
+  INTRO_OUT_A: 0.1,
+  INTRO_OUT_B: 0.24,
+  INDEX_IN_A: 0.22,
+  INDEX_IN_B: 0.34,
+  SWAPS_A: 0.38,
+  SWAP_GAP: 0.09,
+  INDEX_OUT_A: 0.68,
+  INDEX_OUT_B: 0.78,
+  PROTO_IN_A: 0.76,
+  PROTO_IN_B: 0.86,
+};
 
 /* ============================================================
-   COMPONENT
+   KINETIC TEXT
+   ============================================================ */
+function Split({
+  text,
+  className,
+  letterClass,
+}: {
+  text: string;
+  className?: string;
+  letterClass?: string;
+}) {
+  return (
+    <span className={className} aria-label={text}>
+      {text.split("").map((c, i) => (
+        <span
+          key={i}
+          className={`inline-block will-change-transform ${letterClass ?? ""}`}
+          data-letter
+        >
+          {c === " " ? "\u00A0" : c}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/* ============================================================
+   MAIN COMPONENT
    ============================================================ */
 export default function SparesGrid() {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const blurWrapperRef = useRef<HTMLDivElement>(null);
+  const introRef = useRef<HTMLDivElement>(null);
+  const indexRef = useRef<HTMLDivElement>(null);
+  const protocolRef = useRef<HTMLDivElement>(null);
 
+  const introImgRef = useRef<HTMLDivElement>(null);
+  const introSmallA = useRef<HTMLDivElement>(null);
+  const introSmallB = useRef<HTMLDivElement>(null);
+
+  const indexImgRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const indexRowRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const indexCounterRef = useRef<HTMLSpanElement>(null);
+  const indexLabelRef = useRef<HTMLSpanElement>(null);
+
+  const sceneLabelRef = useRef<HTMLSpanElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const railDotsRef = useRef<Array<HTMLDivElement | null>>([]);
+
+  const [clock, setClock] = useState("--:--:--");
+
+  /* ---- live clock ---- */
+  useEffect(() => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const tick = () => {
+      const d = new Date();
+      setClock(
+        `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+      );
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  /* ============================================================
+     SCROLL ORCHESTRATION
+     ============================================================ */
   useIsomorphicLayoutEffect(() => {
     const section = sectionRef.current;
-    const stage = stageRef.current;
-    const grid = gridRef.current;
-    const blurWrapper = blurWrapperRef.current;
-    if (!section || !stage || !grid || !blurWrapper) return;
+    if (!section) return;
 
-    /* -------- MEASUREMENTS -------- */
-    let heroRect = { x: 0, y: 0, w: 0, h: 0 };
-    let viewport = { w: 0, h: 0 };
-    let sMax = 1;
+    let enterPlayed = false;
+    let activeCategory = -1;
+    let activeScene = 0;
+    let lastSceneLabel = "";
 
-    const measure = () => {
-      const sRect = stage.getBoundingClientRect();
-      viewport = { w: sRect.width, h: sRect.height };
+    const setSceneLabel = (text: string) => {
+      if (!sceneLabelRef.current || text === lastSceneLabel) return;
+      lastSceneLabel = text;
+      gsap.to(sceneLabelRef.current, {
+        opacity: 0,
+        duration: 0.12,
+        onComplete: () => {
+          if (sceneLabelRef.current) {
+            sceneLabelRef.current.textContent = text;
+            gsap.to(sceneLabelRef.current, { opacity: 1, duration: 0.3 });
+          }
+        },
+      });
+    };
 
-      /* Find the VISIBLE hero cell (desktop or mobile one) */
-      const heroes = stage.querySelectorAll<HTMLElement>(".ms-cell-hero");
-      for (const el of Array.from(heroes)) {
-        const r = el.getBoundingClientRect();
-        if (r.width > 0 && r.height > 0) {
-          heroRect = {
-            x: r.left - sRect.left,
-            y: r.top - sRect.top,
-            w: r.width,
-            h: r.height,
-          };
-          break;
-        }
+    const setScene = (i: number) => {
+      if (i === activeScene) return;
+      activeScene = i;
+      railDotsRef.current.forEach((dot, idx) => {
+        if (!dot) return;
+        const active = idx === i;
+        dot.style.width = active ? "28px" : "8px";
+        dot.style.background = active
+          ? "var(--color-amber-accent)"
+          : "rgba(255,255,255,0.28)";
+      });
+      setSceneLabel(
+        i === 0 ? "01 — OVERVIEW" : i === 1 ? "02 — MANIFEST" : "03 — PROTOCOL"
+      );
+    };
+
+    /* -------- CATEGORY SWAP -------- */
+    const setCategory = (next: number, animate = true) => {
+      if (next === activeCategory) return;
+      const prev = activeCategory;
+      activeCategory = next;
+
+      if (indexCounterRef.current) {
+        indexCounterRef.current.textContent = `0${next + 1}`;
+      }
+      if (indexLabelRef.current) {
+        indexLabelRef.current.textContent = CATEGORIES[next].title;
       }
 
-      sMax =
-        viewport.w > 0 && heroRect.w > 0
-          ? Math.max(viewport.w / heroRect.w, viewport.h / heroRect.h)
-          : 1;
-    };
+      indexRowRefs.current.forEach((row, i) => {
+        if (!row) return;
+        const active = i === next;
+        const num = row.querySelector<HTMLElement>("[data-num]");
+        const title = row.querySelector<HTMLElement>("[data-title]");
+        const desc = row.querySelector<HTMLElement>("[data-desc]");
+        const tag = row.querySelector<HTMLElement>("[data-tag]");
+        const bar = row.querySelector<HTMLElement>("[data-bar]");
 
-    /* -------- GRID TRANSFORM -------- */
-    const applyGrid = (p: number) => {
-      if (!heroRect.w) return;
-      const s = 1 + (sMax - 1) * p;
-      const ox = heroRect.x + heroRect.w / 2;
-      const oy = heroRect.y + heroRect.h / 2;
-      const tx = (viewport.w / 2 - ox) * p;
-      const ty = (viewport.h / 2 - oy) * p;
+        if (!animate) {
+          gsap.set(row, { opacity: active ? 1 : 0.28 });
+          if (num)
+            gsap.set(num, {
+              color: active
+                ? "var(--color-amber-accent)"
+                : "rgba(255,255,255,0.28)",
+            });
+          if (title) gsap.set(title, { opacity: active ? 1 : 0.55, x: 0 });
+          if (desc)
+            gsap.set(desc, {
+              opacity: active ? 1 : 0,
+              height: active ? "auto" : 0,
+            });
+          if (tag) gsap.set(tag, { opacity: active ? 1 : 0 });
+          if (bar) gsap.set(bar, { scaleX: active ? 1 : 0 });
+          return;
+        }
 
-      gsap.set(grid, {
-        transformOrigin: `${ox}px ${oy}px`,
-        x: tx,
-        y: ty,
-        scale: s,
+        gsap.to(row, {
+          opacity: active ? 1 : 0.28,
+          duration: 0.45,
+          ease: "power2.out",
+        });
+        if (num)
+          gsap.to(num, {
+            color: active
+              ? "var(--color-amber-accent)"
+              : "rgba(255,255,255,0.28)",
+            duration: 0.45,
+          });
+        if (title)
+          gsap.to(title, {
+            opacity: active ? 1 : 0.55,
+            x: 0,
+            duration: 0.45,
+          });
+        if (desc)
+          gsap.to(desc, {
+            opacity: active ? 1 : 0,
+            height: active ? "auto" : 0,
+            duration: 0.55,
+            ease: "power3.out",
+          });
+        if (tag) gsap.to(tag, { opacity: active ? 1 : 0, duration: 0.4 });
+        if (bar)
+          gsap.to(bar, {
+            scaleX: active ? 1 : 0,
+            duration: 0.6,
+            ease: "power3.out",
+          });
+      });
+
+      indexImgRefs.current.forEach((img, i) => {
+        if (!img) return;
+        if (i === next) {
+          gsap.set(img, { zIndex: 3 });
+          gsap.fromTo(
+            img,
+            { clipPath: "inset(100% 0% 0% 0%)", scale: 1.12 },
+            {
+              clipPath: "inset(0% 0% 0% 0%)",
+              scale: 1,
+              duration: animate ? 1.0 : 0,
+              ease: "power3.out",
+            }
+          );
+        } else if (i === prev) {
+          gsap.to(img, {
+            clipPath: "inset(0% 0% 100% 0%)",
+            duration: animate ? 0.9 : 0,
+            ease: "power3.inOut",
+            onComplete: () => gsap.set(img, { zIndex: 1 }),
+          });
+        } else {
+          gsap.set(img, { clipPath: "inset(100% 0% 0% 0%)", zIndex: 0 });
+        }
       });
     };
 
-    /* -------- BLUR -------- */
-    const applyBlur = (amount: number) => {
-      gsap.set(blurWrapper, { filter: `blur(${amount}px)` });
-    };
-
-    /* First measure + initial state */
-    let measured = false;
-    const raf = requestAnimationFrame(() => {
-      measure();
-      applyGrid(0);
-      applyBlur(0);
-      measured = true;
-    });
-
-    const onResize = () => {
-      measure();
-      /* Re-apply current state without needing the scroll position */
-      applyGrid(0);
-      applyBlur(0);
-    };
-    window.addEventListener("resize", onResize);
-
-    /* -------- GSAP SETUP -------- */
     const ctx = gsap.context(() => {
-      const readings = Array.from(
-        stage.querySelectorAll<HTMLElement>(".ms-reading")
-      );
+      /* INTRO — initial state */
+      gsap.set(introRef.current, { opacity: 1 });
+      if (introImgRef.current)
+        gsap.set(introImgRef.current, { clipPath: "inset(100% 0% 0% 0%)" });
+      if (introSmallA.current)
+        gsap.set(introSmallA.current, { opacity: 0, y: 30 });
+      if (introSmallB.current)
+        gsap.set(introSmallB.current, { opacity: 0, y: 40 });
+      gsap.set(".intro-title-letter", { yPercent: 110, opacity: 0 });
+      gsap.set(".intro-meta", { opacity: 0, y: 14 });
+      gsap.set(".intro-stats .stat-row", { opacity: 0, y: 18 });
 
-      /* PRE-PAINT */
-      gsap.set(".ms-cell", { opacity: 0 });
-      gsap.set(".ms-cell-br", { scaleY: 0, transformOrigin: "top center" });
-      gsap.set(".ms-cell-bb", { scaleX: 0, transformOrigin: "left center" });
-      gsap.set(".ms-cell-photo, .ms-hero-cell-img", { opacity: 0 });
-      gsap.set(".ms-hud-top, .ms-hud-bottom", { opacity: 0, y: 12 });
-      gsap.set(readings, { opacity: 0 });
-      readings.forEach((r) => {
-        gsap.set(r.querySelectorAll("[data-r-anim]"), { opacity: 0, y: 40 });
+      /* INDEX — hidden */
+      gsap.set(indexRef.current, { opacity: 0 });
+      gsap.set(".index-row", { opacity: 0, x: -50 });
+      gsap.set(".index-frame", { clipPath: "inset(50% 0% 50% 0%)" });
+      gsap.set(".index-hud", { opacity: 0, y: 14 });
+
+      /* PROTOCOL — hidden */
+      gsap.set(protocolRef.current, { opacity: 0 });
+      gsap.set(".proto-letter", { yPercent: 100, opacity: 0 });
+      gsap.set(".proto-meta", { opacity: 0, y: 20 });
+      gsap.set(".proto-step", { opacity: 0, y: 28 });
+      gsap.set(".proto-journey-item", { opacity: 0, x: -30 });
+      gsap.set(".proto-journey-line", {
+        scaleX: 0,
+        transformOrigin: "left center",
       });
-      gsap.set(".ms-content-bg", { opacity: 0 });
-      gsap.set(".ms-scan-line", { opacity: 0 });
+      gsap.set(".proto-glow", { opacity: 0, scale: 0.7 });
 
-      /* ENTER */
-      const enterTl = gsap.timeline({
+      /* ============================================================
+         INTRO ENTRANCE
+         ============================================================ */
+      const introTl = gsap.timeline({
         paused: true,
-        defaults: { ease: "power3.out" },
+        defaults: { ease: "power4.out" },
       });
 
-      enterTl
-        .to(".ms-hud-top, .ms-hud-bottom", { opacity: 1, y: 0, duration: 0.5 })
+      introTl
         .to(
-          ".ms-cell",
-          { opacity: 1, duration: 0.5, stagger: { each: 0.02, from: "start" } },
-          "-=0.3"
+          ".intro-meta",
+          { opacity: 1, y: 0, duration: 0.6, stagger: 0.08 },
+          0
         )
         .to(
-          ".ms-cell-br",
-          { scaleY: 1, duration: 0.5, stagger: { each: 0.015, from: "start" } },
-          "-=0.4"
+          ".intro-title-letter",
+          {
+            yPercent: 0,
+            opacity: 1,
+            duration: 1.1,
+            stagger: { each: 0.05, from: "start" },
+          },
+          0.1
         )
         .to(
-          ".ms-cell-bb",
-          { scaleX: 1, duration: 0.5, stagger: { each: 0.015, from: "end" } },
-          "<"
+          introImgRef.current,
+          {
+            clipPath: "inset(0% 0% 0% 0%)",
+            duration: 1.3,
+            ease: "power4.out",
+          },
+          0.25
         )
+        .to(introSmallA.current, { opacity: 1, y: 0, duration: 0.8 }, 0.7)
+        .to(introSmallB.current, { opacity: 1, y: 0, duration: 0.8 }, 0.8)
         .to(
-          ".ms-cell-photo, .ms-hero-cell-img",
-          { opacity: 1, duration: 0.6, stagger: 0.05 },
-          "-=0.5"
+          ".intro-stats .stat-row",
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            stagger: 0.08,
+          },
+          0.9
         );
+
+      const skuEl =
+        introRef.current?.querySelector<HTMLElement>("[data-sku-count]");
+      if (skuEl) {
+        const obj = { v: 0 };
+        introTl.to(
+          obj,
+          {
+            v: 10400,
+            duration: 1.6,
+            ease: "power2.out",
+            onUpdate: () => {
+              skuEl.textContent = Math.round(obj.v).toLocaleString("en-US");
+            },
+          },
+          0.9
+        );
+      }
 
       ScrollTrigger.create({
         trigger: section,
-        start: "top 55%",
-        onEnter: () => enterTl.progress(0).play(),
+        start: "top 65%",
+        onEnter: () => {
+          if (enterPlayed) return;
+          enterPlayed = true;
+          introTl.play();
+        },
         onLeaveBack: () => {
-          enterTl.progress(0).pause();
-          gsap.set(".ms-cell, .ms-cell-photo, .ms-hero-cell-img", {
-            opacity: 0,
-          });
-          gsap.set(".ms-cell-br", { scaleY: 0 });
-          gsap.set(".ms-cell-bb", { scaleX: 0 });
+          introTl.pause(0);
+          enterPlayed = false;
         },
       });
 
-      /* READING SWITCHER */
-      let activeReading = 0;
-      let readingTl: gsap.core.Timeline | null = null;
-
-      const setReadingState = (reading: HTMLElement, visible: boolean) => {
-        const anim = reading.querySelectorAll("[data-r-anim]");
-        gsap.set(anim, { opacity: visible ? 1 : 0, y: visible ? 0 : 40 });
-      };
-
-      const switchReading = (next: number) => {
-        if (next === activeReading) return;
-        const prev = activeReading;
-        activeReading = next;
-
-        if (readingTl) {
-          readingTl.kill();
-          readingTl = null;
-        }
-
-        readings.forEach((r, i) => {
-          if (i !== prev && i !== next) gsap.set(r, { opacity: 0 });
-        });
-
-        const prevR = readings[prev];
-        const nextR = readings[next];
-        if (!prevR || !nextR) return;
-
-        setReadingState(nextR, false);
-        gsap.set(nextR, { opacity: 1 });
-
-        const tl = gsap.timeline({
-          onComplete: () => {
-            readingTl = null;
-            gsap.set(prevR, { opacity: 0 });
-          },
-        });
-
-        tl.to(
-          prevR.querySelectorAll("[data-r-anim]"),
-          {
-            opacity: 0,
-            y: -20,
-            duration: 0.25,
-            stagger: 0.015,
-            ease: "power2.in",
-          },
-          0
-        )
-          .set(prevR, { opacity: 0 }, 0.28)
-          .to(
-            nextR.querySelectorAll("[data-r-anim]"),
-            {
-              opacity: 1,
-              y: 0,
-              duration: 0.4,
-              stagger: 0.04,
-              ease: "power3.out",
-            },
-            0.32
-          );
-
-        readingTl = tl;
-      };
-
-      /* SCRUB */
-      const contentBg = stage.querySelector<HTMLElement>(".ms-content-bg");
-      const scanLine = stage.querySelector<HTMLElement>(".ms-scan-line");
-      const counterEl = section.querySelector<HTMLElement>(".ms-counter");
-      const cells = Array.from(stage.querySelectorAll<HTMLElement>(".ms-cell"));
-      const nonHeroCells = cells.filter(
-        (c) => !c.classList.contains("ms-cell-hero")
-      );
-
-      let lastReadingIdx = -1;
-      let exitActive = false;
-
+      /* ============================================================
+         MASTER SCRUB
+         ============================================================ */
       ScrollTrigger.create({
         trigger: section,
         start: "top top",
@@ -298,155 +425,125 @@ export default function SparesGrid() {
         scrub: 0.4,
         invalidateOnRefresh: true,
         onUpdate: (self) => {
-          if (!measured) measure();
           const p = self.progress;
 
-          /* ---- EXPANSION: 0.05 → 0.32 ---- */
-          const expansionP = clamp01((p - 0.05) / 0.27);
-          const eased = expansionP * expansionP * (3 - 2 * expansionP);
-
-          if (!exitActive) {
-            /* Grid "microscope" transform */
-            applyGrid(eased);
-
-            /* Blur ramps in as the image claims the stage */
-            const blurAmt = lerp(0, 6, clamp01((p - 0.1) / 0.2));
-            applyBlur(blurAmt);
-
-            /* Fade borders */
-            const borderFade = clamp01((p - 0.06) / 0.14);
-            gsap.set(".ms-cell-br, .ms-cell-bb", { opacity: 1 - borderFade });
-
-            /* Fade non-hero cells (they're already off-screen after scaling,
-               this just cleans up mid-transition) */
-            const cellFade = clamp01((p - 0.05) / 0.15);
-            gsap.set(nonHeroCells, { opacity: 1 - cellFade });
+          if (progressBarRef.current) {
+            progressBarRef.current.style.transform = `scaleX(${p})`;
           }
 
-          /* ---- CONTENT GRADIENT ---- */
-          const contentBgP = clamp01((p - 0.24) / 0.08);
-          if (contentBg) gsap.set(contentBg, { opacity: contentBgP });
+          /* ---------- INTRO EXIT (0.10 → 0.24) ---------- */
+          const ix = rangeP(p, M.INTRO_OUT_A, M.INTRO_OUT_B);
+          if (introRef.current) {
+            gsap.set(introRef.current, { opacity: ix < 1 ? 1 : 0 });
+          }
+          if (ix > 0 && ix < 1.001) {
+            gsap.set(".intro-title-letter", {
+              yPercent: -110 * ix,
+              opacity: 1 - ix * 1.4,
+            });
+            gsap.set(".intro-meta", { opacity: 1 - ix * 1.8, y: -30 * ix });
+            if (introImgRef.current) {
+              gsap.set(introImgRef.current, {
+                clipPath: `inset(${ix * 60}% 0% ${ix * 0}% 0%)`,
+                scale: 1 + ix * 0.08,
+              });
+            }
+            if (introSmallA.current)
+              gsap.set(introSmallA.current, {
+                opacity: 1 - ix * 2,
+                x: 40 * ix,
+              });
+            if (introSmallB.current)
+              gsap.set(introSmallB.current, {
+                opacity: 1 - ix * 2,
+                x: -40 * ix,
+              });
+            gsap.set(".intro-stats .stat-row", {
+              opacity: 1 - ix * 2,
+              y: 20 * ix,
+            });
+          } else if (ix >= 1) {
+            gsap.set(introRef.current, { opacity: 0, pointerEvents: "none" });
+          }
 
-          /* ---- SCAN LINE ---- */
-          const scanP = clamp01((p - 0.27) / 0.05);
-          if (scanLine) {
-            gsap.set(scanLine, {
-              opacity: scanP > 0 && scanP < 1 ? 0.85 : 0,
-              y: lerp(-40, 40, scanP) + "vh",
+          /* ---------- INDEX ENTER (0.22 → 0.34) ---------- */
+          const ii = rangeP(p, M.INDEX_IN_A, M.INDEX_IN_B);
+          if (indexRef.current) {
+            gsap.set(indexRef.current, { opacity: ii > 0 ? 1 : 0 });
+          }
+          if (ii > 0) {
+            gsap.set(".index-row", {
+              opacity: ii,
+              x: -50 * (1 - ii),
+            });
+            gsap.set(".index-frame", {
+              clipPath: `inset(${50 - ii * 50}% 0% ${50 - ii * 50}% 0%)`,
+            });
+            gsap.set(".index-hud", { opacity: ii, y: 14 * (1 - ii) });
+          }
+
+          /* ---------- CATEGORY SWAPS ---------- */
+          if (ii >= 0.9 && p < M.INDEX_OUT_A) {
+            const swapP = p - M.SWAPS_A;
+            let idx = 0;
+            if (swapP >= M.SWAP_GAP * 3) idx = 3;
+            else if (swapP >= M.SWAP_GAP * 2) idx = 2;
+            else if (swapP >= M.SWAP_GAP) idx = 1;
+            setCategory(idx, true);
+          }
+
+          /* ---------- INDEX EXIT (0.68 → 0.78) ---------- */
+          const ixOut = rangeP(p, M.INDEX_OUT_A, M.INDEX_OUT_B);
+          if (ixOut > 0) {
+            gsap.set(".index-row", {
+              x: -70 * ixOut,
+              opacity: (1 - ixOut) * 0.9,
+            });
+            gsap.set(".index-frame", {
+              clipPath: `inset(0% 0% ${ixOut * 100}% 0%)`,
+            });
+            gsap.set(".index-hud", { opacity: 1 - ixOut });
+            if (ixOut >= 1 && indexRef.current) {
+              gsap.set(indexRef.current, { opacity: 0, pointerEvents: "none" });
+            }
+          }
+
+          /* ---------- PROTOCOL ENTER (0.76 → 0.86) ---------- */
+          const pi = rangeP(p, M.PROTO_IN_A, M.PROTO_IN_B);
+          if (protocolRef.current) {
+            gsap.set(protocolRef.current, { opacity: pi > 0 ? 1 : 0 });
+          }
+          if (pi > 0) {
+            const eased = 1 - Math.pow(1 - pi, 3);
+            gsap.set(".proto-glow", {
+              opacity: eased * 0.85,
+              scale: 0.7 + eased * 0.6,
+            });
+            gsap.set(".proto-letter", {
+              yPercent: 100 - 100 * eased,
+              opacity: eased * 1.3,
+            });
+            gsap.set(".proto-meta", { opacity: eased, y: 20 * (1 - eased) });
+            gsap.set(".proto-step", {
+              opacity: eased,
+              y: 28 * (1 - eased),
+            });
+            gsap.set(".proto-journey-line", { scaleX: eased });
+            gsap.set(".proto-journey-item", {
+              opacity: eased,
+              x: -30 * (1 - eased),
             });
           }
 
-          /* ---- READINGS: 0.36 / 0.55 / 0.74 ---- */
-          let readingIdx = -1;
-          if (p >= 0.74) readingIdx = 2;
-          else if (p >= 0.55) readingIdx = 1;
-          else if (p >= 0.36) readingIdx = 0;
-
-          if (readingIdx >= 0 && readingIdx !== lastReadingIdx && !exitActive) {
-            if (lastReadingIdx === -1) {
-              gsap.set(readings[readingIdx], { opacity: 1 });
-              setReadingState(readings[readingIdx], true);
-            } else {
-              switchReading(readingIdx);
-            }
-            lastReadingIdx = readingIdx;
-            if (counterEl)
-              counterEl.textContent = `SECTION 0${readingIdx + 1} / 03`;
-          }
-
-          if (readingIdx === -1 && lastReadingIdx !== -1 && !exitActive) {
-            readings.forEach((r) => gsap.set(r, { opacity: 0 }));
-            lastReadingIdx = -1;
-            if (counterEl) counterEl.textContent = "GRID";
-          }
+          /* ---------- SCENE INDICATOR ---------- */
+          if (p < 0.2) setScene(0);
+          else if (p < 0.7) setScene(1);
+          else setScene(2);
         },
       });
-
-      /* ---- EXIT ---- */
-      const nextSection = document.getElementById("charter");
-      if (nextSection) {
-        const exitTl = gsap.timeline({ paused: true });
-
-        exitTl
-          .to(
-            ".ms-reading [data-r-anim]",
-            {
-              opacity: 0,
-              y: -30,
-              duration: 0.4,
-              stagger: 0.02,
-              ease: "power2.in",
-            },
-            0
-          )
-          .to(".ms-reading", { opacity: 0, duration: 0.25 }, 0.15)
-          .to(
-            ".ms-content-bg",
-            { opacity: 0, duration: 0.4, ease: "power2.in" },
-            0.15
-          )
-          .to(
-            ".ms-hud-top, .ms-hud-bottom",
-            { opacity: 0, y: 16, duration: 0.4, ease: "power3.in" },
-            0.3
-          )
-          .to(
-            blurWrapper,
-            { opacity: 0, duration: 0.5, ease: "power2.in" },
-            0.4
-          );
-
-        ScrollTrigger.create({
-          trigger: nextSection,
-          start: "top 80%",
-          end: "top 45%",
-          scrub: 0.5,
-          invalidateOnRefresh: true,
-          fastScrollEnd: true,
-          onUpdate: (self) => {
-            if (self.progress <= 0 && exitActive) {
-              exitActive = false;
-              gsap.set(blurWrapper, { opacity: 1 });
-              applyGrid(clamp01((0 - 0.05) / 0.27) === 0 ? 0 : 1);
-              applyBlur(0);
-              gsap.set(".ms-cell-br, .ms-cell-bb", { opacity: 1 });
-              return;
-            }
-            if (self.progress <= 0) return;
-
-            if (!exitActive) {
-              exitActive = true;
-
-              if (readingTl) {
-                readingTl.kill();
-                readingTl = null;
-              }
-              if (enterTl.progress() < 1) enterTl.progress(1).pause();
-
-              readings.forEach((r, i) => {
-                if (i === lastReadingIdx) {
-                  gsap.set(r, { opacity: 1 });
-                  setReadingState(r, true);
-                } else {
-                  gsap.set(r, { opacity: 0 });
-                }
-              });
-
-              gsap.set(blurWrapper, { opacity: 1 });
-              applyGrid(1);
-            }
-
-            exitTl.progress(self.progress);
-          },
-        });
-      }
     }, section);
 
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onResize);
-      ctx.revert();
-    };
+    return () => ctx.revert();
   }, []);
 
   /* ============================================================
@@ -456,385 +553,430 @@ export default function SparesGrid() {
     <section
       ref={sectionRef}
       id="spares"
-      className="relative w-full"
-      style={{ height: "240vh", zIndex: 5 }}
+      className="relative w-full h-[300vh] md:h-[460vh]"
+      style={{ zIndex: 5 }}
     >
-      <div className="sticky top-0 w-full h-screen overflow-hidden bg-[var(--color-sky-base)]">
+      <div className="sticky top-0 w-full h-[100dvh] overflow-hidden bg-[var(--color-sky-base)]">
         <div ref={stageRef} className="relative w-full h-full">
-          {/* ============ BLUR WRAPPER (grid scales + blurs inside here) ============ */}
+          {/* ============================================================
+              AMBIENT LAYERS
+              ============================================================ */}
           <div
-            ref={blurWrapperRef}
-            className="absolute inset-0 will-change-[filter,opacity]"
-          >
-            <div
-              ref={gridRef}
-              className="absolute inset-0 will-change-transform"
-            >
-              {/* ===== DESKTOP GRID: 6 cols × 2 rows (portrait cells) ===== */}
-              <div className="hidden md:grid grid-cols-6 grid-rows-2 h-full w-full">
-                <DeskCell />
-                <DeskCell>
-                  <p className="text-[10px] uppercase tracking-[0.3em] font-mono text-[var(--color-amber-accent)]">
-                    {"// 05. Parts & Logistics"}
-                  </p>
-                </DeskCell>
-                <DeskCell
-                  photo="/assets/spares/grid-wheel.webp"
-                  alt="Brake assembly"
-                />
+            className="absolute inset-0 pointer-events-none z-[11] opacity-[0.05] mix-blend-overlay"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+              backgroundSize: "170px 170px",
+            }}
+            aria-hidden
+          />
 
-                <DeskCell />
-                <DeskCell
-                  photo="/assets/spares/grid-avionics.webp"
-                  alt="Avionics"
-                />
-                <DeskCell />
-
-                <DeskCell>
-                  <h2 className="font-display font-bold uppercase text-[3vw] leading-[0.85] tracking-[-0.04em] text-[var(--color-ink-primary)]">
-                    Spares.
-                  </h2>
-                </DeskCell>
-                <DeskCell
-                  hero
-                  photo="/assets/spares/grid-hero-shelves.webp"
-                  alt="Aviation parts shelving"
-                />
-                <DeskCell>
-                  <div className="flex flex-col">
-                    <span className="font-display text-[1.8vw] font-bold leading-none text-[var(--color-ink-primary)] tracking-[-0.03em]">
-                      10,400
-                    </span>
-                    <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-ink-secondary)]/60 mt-1.5">
-                      SKUs
-                    </span>
-                  </div>
-                </DeskCell>
-                <DeskCell
-                  photo="/assets/spares/grid-cargo.webp"
-                  alt="Cargo loading"
-                />
-                <DeskCell>
-                  <div className="flex flex-col">
-                    <span className="font-display text-[1.8vw] font-bold leading-none text-[var(--color-ink-primary)] tracking-[-0.03em]">
-                      24/7
-                    </span>
-                    <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-ink-secondary)]/60 mt-1.5">
-                      AOG
-                    </span>
-                  </div>
-                </DeskCell>
-                <DeskCell>
-                  <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--color-ink-primary)]/70">
-                    Scroll <span className="inline-block ml-1.5">{"->"}</span>
-                  </p>
-                </DeskCell>
+          {/* ============================================================
+              SCENE 1 — INTRO / EDITORIAL COLLAGE
+              ============================================================ */}
+          <div ref={introRef} className="absolute inset-0 z-10">
+            <div className="relative w-full h-full p-5 md:p-10">
+              <div className="flex justify-between items-center intro-meta">
+                <p className="font-mono text-[10px] md:text-[11px] uppercase tracking-[0.35em] text-[var(--color-amber-accent)]">
+                  {"// 05. Parts & Logistics"}
+                </p>
+                <p className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.3em] text-[var(--color-ink-primary)]/55">
+                  06°27'N 003°23'E
+                </p>
               </div>
 
-              {/* ===== MOBILE GRID: 3 cols × 5 rows (portrait cells) ===== */}
-              <div className="md:hidden grid grid-cols-3 grid-rows-5 h-full w-full">
-                <MobCell />
-                <MobCell
-                  hero
-                  photo="/assets/spares/grid-hero-shelves.webp"
-                  alt="Aviation parts shelving"
-                />
-                <MobCell
-                  photo="/assets/spares/grid-wheel.webp"
-                  alt="Brake assembly"
-                />
-
-                <MobCell>
-                  <h2 className="font-display font-bold uppercase text-[10vw] leading-[0.85] tracking-[-0.04em] text-[var(--color-ink-primary)]">
-                    Spares.
-                  </h2>
-                </MobCell>
-                <MobCell />
-                <MobCell>
-                  <p className="text-[8px] uppercase tracking-[0.3em] font-mono text-[var(--color-amber-accent)]">
-                    {"// 05. Parts"}
-                  </p>
-                </MobCell>
-
-                <MobCell photo="/assets/spares/grid-cargo.webp" alt="Cargo" />
-                <MobCell>
-                  <div className="flex flex-col">
-                    <span className="font-display text-[7vw] font-bold leading-none text-[var(--color-ink-primary)] tracking-[-0.03em]">
-                      10,400
-                    </span>
-                    <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--color-ink-secondary)]/60 mt-1">
-                      SKUs
-                    </span>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 mt-6 md:mt-8 h-[calc(100%-140px)]">
+                <div className="md:col-span-8 relative h-[40vh] md:h-full order-2 md:order-1">
+                  <div
+                    ref={introImgRef}
+                    className="absolute inset-0 overflow-hidden"
+                    style={{ willChange: "clip-path, transform" }}
+                  >
+                    <img
+                      src="/assets/spares/grid-hero-shelves.webp"
+                      alt="Aviation parts shelving"
+                      className="w-full h-full object-cover scale-[1.02]"
+                      draggable={false}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                    <div className="absolute bottom-4 left-4 md:bottom-6 md:left-6 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-amber-accent)]" />
+                      <span className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.3em] text-white/90">
+                        Hub 01 / Lagos
+                      </span>
+                    </div>
                   </div>
-                </MobCell>
-                <MobCell />
+                </div>
 
-                <MobCell />
-                <MobCell
-                  photo="/assets/spares/grid-avionics.webp"
-                  alt="Avionics"
-                />
-                <MobCell>
-                  <div className="flex flex-col">
-                    <span className="font-display text-[7vw] font-bold leading-none text-[var(--color-ink-primary)] tracking-[-0.03em]">
+                <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 order-1 md:order-2">
+                  <div>
+                    <div className="overflow-hidden">
+                      <h2 className="font-display font-bold uppercase text-[var(--color-ink-primary)] text-[18vw] md:text-[5.5vw] leading-[0.82] tracking-[-0.055em]">
+                        <Split
+                          text="Spares."
+                          letterClass="intro-title-letter"
+                        />
+                      </h2>
+                    </div>
+                    <p className="font-display font-bold uppercase text-[var(--color-ink-primary)]/50 text-[4.5vw] md:text-[1.35vw] leading-[1.05] tracking-[-0.03em] mt-2 md:mt-3 max-w-md">
+                      Certified stock. Immediate availability.
+                    </p>
+                  </div>
+
+                  <div className="hidden md:grid grid-cols-2 gap-3 md:gap-4 flex-1">
+                    <div
+                      ref={introSmallA}
+                      className="relative overflow-hidden aspect-[4/5]"
+                    >
+                      <img
+                        src="/assets/spares/grid-wheel.webp"
+                        alt="Brake assembly"
+                        className="w-full h-full object-cover"
+                        draggable={false}
+                      />
+                    </div>
+                    <div
+                      ref={introSmallB}
+                      className="relative overflow-hidden aspect-[4/5] mt-6"
+                    >
+                      <img
+                        src="/assets/spares/grid-avionics.webp"
+                        alt="Avionics"
+                        className="w-full h-full object-cover"
+                        draggable={false}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="intro-stats absolute bottom-5 md:bottom-10 left-5 md:left-10 right-5 md:right-10">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 border-t border-[var(--color-ink-primary)]/15 pt-4">
+                  <div className="stat-row">
+                    <p className="font-display font-bold text-[var(--color-ink-primary)] text-[28px] md:text-[36px] leading-none tracking-[-0.04em] tabular-nums">
+                      <span data-sku-count>0</span>
+                    </p>
+                    <p className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.28em] text-[var(--color-ink-secondary)]/60 mt-1.5">
+                      SKUs indexed
+                    </p>
+                  </div>
+                  <div className="stat-row">
+                    <p className="font-display font-bold text-[var(--color-ink-primary)] text-[28px] md:text-[36px] leading-none tracking-[-0.04em]">
                       24/7
-                    </span>
-                    <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--color-ink-secondary)]/60 mt-1">
-                      AOG
-                    </span>
+                    </p>
+                    <p className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.28em] text-[var(--color-ink-secondary)]/60 mt-1.5">
+                      AOG desk
+                    </p>
                   </div>
-                </MobCell>
-
-                <MobCell>
-                  <p className="font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--color-ink-secondary)]/60">
-                    EST / MMXXIV
-                  </p>
-                </MobCell>
-                <MobCell>
-                  <p className="font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--color-ink-primary)]/70">
-                    Scroll <span className="inline-block ml-1">{"->"}</span>
-                  </p>
-                </MobCell>
-                <MobCell>
-                  <p className="font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--color-ink-secondary)]/60">
-                    KANO / ABJ / LOS
-                  </p>
-                </MobCell>
+                  <div className="stat-row hidden md:block">
+                    <p className="font-display font-bold text-[var(--color-ink-primary)] text-[28px] md:text-[36px] leading-none tracking-[-0.04em]">
+                      03
+                    </p>
+                    <p className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.28em] text-[var(--color-ink-secondary)]/60 mt-1.5">
+                      Intl. hubs
+                    </p>
+                  </div>
+                  <div className="stat-row hidden md:flex items-end justify-end">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-ink-primary)]/65 flex items-center gap-2">
+                      Scroll
+                      <span className="inline-block animate-bounce">↓</span>
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* ============ CONTENT GRADIENT ============ */}
+          {/* ============================================================
+              SCENE 2 — MANIFEST INDEX
+              ============================================================ */}
           <div
-            className="ms-content-bg absolute inset-0 pointer-events-none z-10"
-            style={{
-              background:
-                "linear-gradient(to top, rgba(6,10,18,0.92) 0%, rgba(6,10,18,0.6) 40%, rgba(6,10,18,0.15) 70%, transparent 100%)",
-            }}
-            aria-hidden
-          />
+            ref={indexRef}
+            className="absolute inset-0 z-10 bg-[var(--color-sky-base)]"
+          >
+            <div className="relative w-full h-full p-5 md:p-10 flex flex-col">
+              <div className="index-hud flex justify-between items-center">
+                <p className="font-mono text-[10px] md:text-[11px] uppercase tracking-[0.35em] text-[var(--color-amber-accent)]">
+                  {"// Manifest Index"}
+                </p>
+                <p className="font-mono text-[10px] md:text-[11px] uppercase tracking-[0.3em] text-[var(--color-ink-primary)]/60 tabular-nums">
+                  <span ref={indexCounterRef}>01</span> / 04
+                </p>
+              </div>
 
-          {/* ============ SCAN LINE ============ */}
-          <div
-            className="ms-scan-line absolute left-0 right-0 top-1/2 h-px pointer-events-none z-20"
-            style={{
-              background:
-                "linear-gradient(90deg, transparent, rgba(251,146,60,0.9), transparent)",
-              boxShadow: "0 0 24px 2px rgba(251,146,60,0.5)",
-            }}
-            aria-hidden
-          />
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 mt-6 md:mt-10 min-h-0">
+                <div className="md:col-span-5 flex flex-col justify-center">
+                  <div className="flex flex-col">
+                    {CATEGORIES.map((cat, i) => (
+                      <div
+                        key={cat.n}
+                        ref={(el) => {
+                          indexRowRefs.current[i] = el;
+                        }}
+                        className="index-row relative border-t border-[var(--color-ink-primary)]/15 py-4 md:py-5"
+                      >
+                        <div
+                          data-bar
+                          className="absolute left-0 top-0 h-px w-full bg-[var(--color-amber-accent)] origin-left"
+                          style={{ transform: "scaleX(0)" }}
+                        />
+                        <div className="flex items-baseline gap-4 md:gap-6">
+                          <span
+                            data-num
+                            className="font-mono text-[11px] md:text-[13px] tracking-[0.2em] tabular-nums"
+                            style={{ color: "var(--color-ink-secondary)" }}
+                          >
+                            {cat.n}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <h3
+                              data-title
+                              className="font-display font-bold uppercase text-[var(--color-ink-primary)] text-[26px] md:text-[2.4vw] leading-[0.95] tracking-[-0.035em]"
+                            >
+                              {cat.title}
+                            </h3>
+                            <div
+                              data-desc
+                              className="overflow-hidden"
+                              style={{ opacity: 0, height: 0 }}
+                            >
+                              <p className="font-sans text-[12px] md:text-[13px] leading-[1.55] text-[var(--color-ink-secondary)] max-w-[42ch] mt-2 mb-1">
+                                {cat.desc}
+                              </p>
+                              <div
+                                data-tag
+                                className="flex items-center gap-3 mt-2"
+                                style={{ opacity: 0 }}
+                              >
+                                <span className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.28em] text-[var(--color-amber-accent)]">
+                                  {cat.tag}
+                                </span>
+                                <span className="w-4 h-px bg-[var(--color-amber-accent)]/40" />
+                                <span className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.28em] text-[var(--color-ink-primary)]/60 tabular-nums">
+                                  {cat.count} in stock
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="border-t border-[var(--color-ink-primary)]/15" />
+                  </div>
+                </div>
 
-          {/* ============ TOP HUD ============ */}
-          <div className="ms-hud-top absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-5 md:px-10 pt-5 md:pt-8 pointer-events-none">
-            <p className="font-mono text-[10px] md:text-xs uppercase tracking-[0.3em] text-[var(--color-amber-accent)]">
-              {"// 05. Parts & Logistics"}
-            </p>
-            <p className="ms-counter font-mono text-[10px] md:text-xs uppercase tracking-[0.25em] text-[var(--color-ink-primary)]/70">
-              GRID
-            </p>
+                <div className="md:col-span-7 hidden md:block relative">
+                  <div className="index-frame absolute inset-0 overflow-hidden">
+                    {CATEGORIES.map((cat, i) => (
+                      <div
+                        key={cat.n}
+                        ref={(el) => {
+                          indexImgRefs.current[i] = el;
+                        }}
+                        className="absolute inset-0"
+                        style={{
+                          clipPath: "inset(100% 0% 0% 0%)",
+                          willChange: "clip-path, transform",
+                        }}
+                      >
+                        <img
+                          src={cat.img}
+                          alt={cat.title}
+                          className="w-full h-full object-cover"
+                          draggable={false}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      </div>
+                    ))}
+
+                    <div className="absolute inset-0 pointer-events-none">
+                      <div className="absolute top-3 left-3 w-5 h-5 border-t border-l border-white/40" />
+                      <div className="absolute top-3 right-3 w-5 h-5 border-t border-r border-white/40" />
+                      <div className="absolute bottom-3 left-3 w-5 h-5 border-b border-l border-white/40" />
+                      <div className="absolute bottom-3 right-3 w-5 h-5 border-b border-r border-white/40" />
+
+                      <div className="absolute bottom-4 left-4 flex items-center gap-2">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--color-amber-accent)] opacity-75 animate-ping" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--color-amber-accent)]" />
+                        </span>
+                        <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-white/90">
+                          Active · <span ref={indexLabelRef}>Consumables</span>
+                        </span>
+                      </div>
+
+                      <div className="absolute top-0 bottom-0 left-1/2 w-px bg-gradient-to-b from-transparent via-[var(--color-amber-accent)]/40 to-transparent" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="index-hud mt-6 flex items-center gap-4 md:gap-6">
+                <p className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.28em] text-[var(--color-ink-primary)]/50">
+                  Sourced · Verified · Dispatched
+                </p>
+                <div className="flex-1 h-px bg-[var(--color-ink-primary)]/15" />
+                <p className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.28em] text-[var(--color-ink-primary)]/50 hidden md:block">
+                  FAA 8130-3 / EASA Form 1
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* ============ READINGS ============ */}
-          <div className="absolute inset-0 z-20 flex items-center px-5 md:px-10 pointer-events-none">
-            <div className="relative w-full max-w-[1400px] mx-auto h-[72vh]">
-              {/* READING 1 */}
-              <div className="ms-reading absolute inset-0 flex flex-col justify-center">
-                <div data-r-anim className="mb-6 md:mb-10">
-                  <p className="font-mono text-[10px] md:text-[11px] uppercase tracking-[0.35em] text-[var(--color-amber-accent)] mb-2">
-                    01 / Core Inventory
-                  </p>
-                  <h3 className="font-display font-bold uppercase text-white text-[7vw] md:text-[2.8vw] leading-[0.95] tracking-[-0.03em] max-w-3xl">
-                    Certified stock. Immediate availability.
-                  </h3>
+          {/* ============================================================
+              SCENE 3 — PROTOCOL / KICKER  (DARK STAGE)
+              ============================================================ */}
+          <div
+            ref={protocolRef}
+            className="absolute inset-0 z-10 bg-[#050810] text-white"
+          >
+            {/* ambient amber glow behind headline */}
+            <div
+              className="proto-glow absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] md:w-[55vw] md:h-[55vw] rounded-full pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(circle, rgba(251,146,60,0.22) 0%, rgba(251,146,60,0.06) 40%, transparent 70%)",
+                filter: "blur(40px)",
+                willChange: "transform, opacity",
+              }}
+              aria-hidden
+            />
+            {/* deep vignette so the top/bottom HUD still reads */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(0,0,0,0.6) 100%)",
+              }}
+              aria-hidden
+            />
+
+            <div className="relative w-full h-full p-5 md:p-10 flex flex-col">
+              <div className="proto-meta flex justify-between items-center">
+                <p className="font-mono text-[10px] md:text-[11px] uppercase tracking-[0.35em] text-[var(--color-amber-accent)]">
+                  {"// AOG Protocol"}
+                </p>
+                <p className="font-mono text-[10px] md:text-[11px] uppercase tracking-[0.3em] text-white/55">
+                  QRF · 24/7/365
+                </p>
+              </div>
+
+              <div className="flex-1 flex flex-col justify-center">
+                <div className="overflow-hidden">
+                  <h2 className="font-display font-bold leading-[0.78] tracking-[-0.06em] text-white text-[26vw] md:text-[11vw]">
+                    <Split text="24" letterClass="proto-letter" />
+                    <span className="text-[var(--color-amber-accent)]">
+                      <Split text="/7" letterClass="proto-letter" />
+                    </span>
+                    <span className="text-white/30">
+                      <Split text="/365" letterClass="proto-letter" />
+                    </span>
+                  </h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 md:gap-y-8">
-                  {INVENTORY.map((item) => (
+
+                <div className="proto-meta mt-6 md:mt-10 max-w-2xl">
+                  <p className="font-sans text-[13px] md:text-[16px] leading-[1.6] text-white/70">
+                    When an aircraft is grounded, our protocol initiates
+                    immediately. No queue. No escalation. No delay. A dedicated
+                    desk, engineered for maximum operational velocity.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 border-t border-white/15 pt-5 mb-6">
+                {AOG_STEPS.map((step) => (
+                  <div
+                    key={step.n}
+                    className="proto-step flex flex-col gap-1.5"
+                  >
+                    <span className="font-mono text-[10px] md:text-[11px] uppercase tracking-[0.3em] text-[var(--color-amber-accent)]">
+                      {step.n}
+                    </span>
+                    <h4 className="font-display font-bold text-white text-[14px] md:text-[18px] tracking-[-0.02em] uppercase leading-tight">
+                      {step.title}
+                    </h4>
+                    <p className="font-sans text-[11px] md:text-[12px] text-white/60 leading-snug">
+                      {step.desc}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="proto-meta relative pb-2">
+                <div className="proto-journey-line h-px w-full bg-gradient-to-r from-[var(--color-amber-accent)] via-[var(--color-amber-accent)]/40 to-white/10 origin-left" />
+                <div className="grid grid-cols-4 gap-2 mt-4">
+                  {JOURNEY.map((j, i) => (
                     <div
-                      key={item.n}
-                      data-r-anim
-                      className="flex flex-col gap-2 border-t border-white/15 pt-4"
+                      key={j}
+                      className="proto-journey-item flex items-center gap-2"
                     >
-                      <div className="flex items-baseline gap-3">
-                        <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/45">
-                          {item.n}
-                        </span>
-                        <h4 className="font-display font-bold text-white text-[15px] md:text-[20px] tracking-[-0.02em] uppercase">
-                          {item.title}
-                        </h4>
-                      </div>
-                      <p className="font-sans text-[12px] md:text-[13px] leading-relaxed text-white/65 max-w-[42ch]">
-                        {item.desc}
-                      </p>
-                      <span className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.25em] text-[var(--color-amber-accent)]/85 mt-1">
-                        {item.chip}
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{
+                          background:
+                            i === JOURNEY.length - 1
+                              ? "var(--color-amber-accent)"
+                              : "rgba(255,255,255,0.4)",
+                          animation:
+                            i === JOURNEY.length - 1
+                              ? "pulse 2s ease-in-out infinite"
+                              : "none",
+                        }}
+                      />
+                      <span className="font-mono text-[9px] md:text-[11px] uppercase tracking-[0.2em] text-white/75">
+                        {j}
                       </span>
                     </div>
                   ))}
                 </div>
               </div>
-
-              {/* READING 2 */}
-              <div className="ms-reading absolute inset-0 flex flex-col justify-center">
-                <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-10 md:gap-20 items-center">
-                  <div data-r-anim className="relative">
-                    <p className="font-mono text-[10px] md:text-[11px] uppercase tracking-[0.35em] text-[var(--color-amber-accent)] mb-4 md:mb-6">
-                      02 / AOG Response Protocol
-                    </p>
-                    <div className="relative inline-flex items-baseline">
-                      <span className="font-display font-bold leading-none tracking-[-0.05em] text-white text-[16vw] md:text-[7vw]">
-                        24/7
-                      </span>
-                      <span className="font-display font-bold leading-none tracking-[-0.05em] text-[var(--color-amber-accent)] text-[16vw] md:text-[7vw] ml-1 md:ml-2">
-                        /365
-                      </span>
-                      <div
-                        className="absolute -top-4 -left-4 md:-top-6 md:-left-6 w-16 h-16 md:w-24 md:h-24 rounded-full border border-dashed border-[var(--color-amber-accent)]/40 pointer-events-none"
-                        style={{ animation: "spin 12s linear infinite" }}
-                      />
-                    </div>
-                    <p className="font-sans text-[13px] md:text-[15px] leading-relaxed text-white/70 max-w-md mt-5 md:mt-6">
-                      Dedicated desk engineered for maximum operational
-                      velocity. When an aircraft is grounded, our protocol
-                      initiates immediately.
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-4 md:gap-5">
-                    {AOG_STEPS.map((step) => (
-                      <div
-                        key={step.n}
-                        data-r-anim
-                        className="grid grid-cols-[auto_1fr] gap-4 md:gap-5 items-start border-t border-white/15 pt-4"
-                      >
-                        <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-amber-accent)] mt-0.5">
-                          {step.n}
-                        </span>
-                        <div>
-                          <h4 className="font-display font-bold text-white text-[15px] md:text-[18px] tracking-[-0.02em] uppercase">
-                            {step.title}
-                          </h4>
-                          <p className="font-sans text-[12px] md:text-[13px] text-white/60 leading-relaxed mt-1">
-                            {step.desc}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* READING 3 */}
-              <div className="ms-reading absolute inset-0 flex flex-col justify-center">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20">
-                  <div>
-                    <p
-                      data-r-anim
-                      className="font-mono text-[10px] md:text-[11px] uppercase tracking-[0.35em] text-[var(--color-amber-accent)] mb-3 md:mb-4"
-                    >
-                      03 / Quality & Traceability
-                    </p>
-                    <h3
-                      data-r-anim
-                      className="font-display font-bold uppercase text-white text-[6.5vw] md:text-[2.2vw] leading-[0.95] tracking-[-0.03em] mb-4 md:mb-6"
-                    >
-                      Every part, fully documented.
-                    </h3>
-                    <p
-                      data-r-anim
-                      className="font-sans text-[12.5px] md:text-[14px] leading-relaxed text-white/65 max-w-md mb-6 md:mb-8"
-                    >
-                      Strict anti-counterfeit enforcement. Full lifecycle
-                      traceability. All components shipped with verifiable
-                      certification.
-                    </p>
-                    <div data-r-anim className="flex flex-wrap gap-2">
-                      {CERTS.map((c) => (
-                        <span
-                          key={c}
-                          className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.2em] px-3 py-1.5 border border-white/25 text-white/90"
-                        >
-                          {c}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p
-                      data-r-anim
-                      className="font-mono text-[10px] md:text-[11px] uppercase tracking-[0.35em] text-[var(--color-amber-accent)] mb-3 md:mb-4"
-                    >
-                      Global Logistics & Customs
-                    </p>
-                    <h3
-                      data-r-anim
-                      className="font-display font-bold uppercase text-white text-[6.5vw] md:text-[2.2vw] leading-[0.95] tracking-[-0.03em] mb-4 md:mb-6"
-                    >
-                      Sourcing to tarmac.
-                    </h3>
-                    <p
-                      data-r-anim
-                      className="font-sans text-[12.5px] md:text-[14px] leading-relaxed text-white/65 max-w-md mb-6 md:mb-8"
-                    >
-                      Full lifecycle supply chain management, from global
-                      sourcing and export compliance to Nigerian Customs
-                      clearance and last-mile delivery.
-                    </p>
-
-                    <div data-r-anim className="relative">
-                      <div className="h-px w-full bg-white/20" />
-                      <div className="grid grid-cols-4 gap-2 mt-3 md:mt-4">
-                        {JOURNEY.map((j, i) => (
-                          <div
-                            key={j}
-                            className="flex flex-col gap-1.5 md:gap-2"
-                          >
-                            <span
-                              className="w-1.5 h-1.5 rounded-full"
-                              style={{
-                                background:
-                                  i === 0
-                                    ? "var(--color-amber-accent)"
-                                    : "rgba(255,255,255,0.4)",
-                                animation:
-                                  i === 0
-                                    ? "pulse 2s ease-in-out infinite"
-                                    : "none",
-                              }}
-                            />
-                            <span className="font-mono text-[8px] md:text-[10px] uppercase tracking-[0.15em] text-white/70">
-                              {j}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* ============ BOTTOM HUD ============ */}
-          <div className="ms-hud-bottom absolute bottom-0 left-0 right-0 z-30 flex items-center gap-4 md:gap-8 px-5 md:px-10 py-4 md:py-5 border-t border-[var(--color-ink-primary)]/15 pointer-events-none">
-            <p className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.25em] text-[var(--color-ink-primary)]/60 whitespace-nowrap">
-              Kano / Abuja / Lagos
-            </p>
-            <div className="flex-1 h-px bg-[var(--color-ink-primary)]/15" />
-            <p className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.25em] text-[var(--color-ink-primary)]/60 whitespace-nowrap hidden md:block">
-              AOG Desk / 24/7/365
-            </p>
+          {/* ============================================================
+              PERSISTENT HUD — mix-blend-difference so it auto-inverts
+              ============================================================ */}
+          <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between gap-4 px-5 md:px-10 pt-5 md:pt-8 pointer-events-none mix-blend-difference">
+            <span
+              ref={sceneLabelRef}
+              className="font-mono text-[10px] md:text-[11px] uppercase tracking-[0.3em] text-white"
+            >
+              01 — OVERVIEW
+            </span>
+            <span className="hidden md:block font-mono text-[10px] md:text-[11px] uppercase tracking-[0.25em] text-white tabular-nums">
+              {clock} WAT
+            </span>
+          </div>
+
+          {/* Rail dots */}
+          <div className="absolute left-5 md:left-10 top-1/2 -translate-y-1/2 z-30 hidden md:flex flex-col gap-3 pointer-events-none">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                ref={(el) => {
+                  railDotsRef.current[i] = el;
+                }}
+                className="h-[3px] rounded-full transition-all duration-500"
+                style={{
+                  width: i === 0 ? "28px" : "8px",
+                  background:
+                    i === 0
+                      ? "var(--color-amber-accent)"
+                      : "rgba(140,140,140,0.5)",
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Progress bar */}
+          <div className="absolute bottom-0 left-0 right-0 z-30 h-[2px] bg-black/15">
+            <div
+              ref={progressBarRef}
+              className="h-full bg-[var(--color-amber-accent)] origin-left"
+              style={{ transform: "scaleX(0)" }}
+            />
           </div>
 
           <style jsx>{`
-            @keyframes spin {
-              from {
-                transform: rotate(0deg);
-              }
-              to {
-                transform: rotate(360deg);
-              }
-            }
             @keyframes pulse {
               0%,
               100% {
@@ -842,84 +984,35 @@ export default function SparesGrid() {
                 transform: scale(1);
               }
               50% {
-                opacity: 0.6;
-                transform: scale(1.4);
+                opacity: 0.5;
+                transform: scale(1.6);
+              }
+            }
+            @keyframes ping {
+              75%,
+              100% {
+                transform: scale(2.2);
+                opacity: 0;
+              }
+            }
+            :global(.animate-ping) {
+              animation: ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+            }
+            :global(.animate-bounce) {
+              animation: bounce 1.6s ease-in-out infinite;
+            }
+            @keyframes bounce {
+              0%,
+              100% {
+                transform: translateY(0);
+              }
+              50% {
+                transform: translateY(4px);
               }
             }
           `}</style>
         </div>
       </div>
     </section>
-  );
-}
-
-/* ============================================================
-   CELLS — hero image is a direct prop (not wrapped in children div)
-   ============================================================ */
-function DeskCell({
-  children,
-  photo,
-  alt,
-  hero,
-}: {
-  children?: React.ReactNode;
-  photo?: string;
-  alt?: string;
-  hero?: boolean;
-}) {
-  return (
-    <div
-      className={`ms-cell relative ${
-        hero ? "ms-cell-hero" : ""
-      } flex items-center justify-start p-5 overflow-hidden`}
-    >
-      <div className="ms-cell-br absolute top-0 right-0 w-px h-full bg-[var(--color-ink-primary)]/15 z-20" />
-      <div className="ms-cell-bb absolute bottom-0 left-0 w-full h-px bg-[var(--color-ink-primary)]/15 z-20" />
-      {photo && (
-        <img
-          src={photo}
-          alt={alt ?? ""}
-          className={`${
-            hero ? "ms-hero-cell-img" : "ms-cell-photo"
-          } absolute inset-0 w-full h-full object-cover`}
-          draggable={false}
-        />
-      )}
-      {children && <div className="relative z-10 max-w-full">{children}</div>}
-    </div>
-  );
-}
-
-function MobCell({
-  children,
-  photo,
-  alt,
-  hero,
-}: {
-  children?: React.ReactNode;
-  photo?: string;
-  alt?: string;
-  hero?: boolean;
-}) {
-  return (
-    <div
-      className={`ms-cell relative ${
-        hero ? "ms-cell-hero" : ""
-      } flex items-center justify-start p-2.5 overflow-hidden`}
-    >
-      <div className="ms-cell-br absolute top-0 right-0 w-px h-full bg-[var(--color-ink-primary)]/15 z-20" />
-      <div className="ms-cell-bb absolute bottom-0 left-0 w-full h-px bg-[var(--color-ink-primary)]/15 z-20" />
-      {photo && (
-        <img
-          src={photo}
-          alt={alt ?? ""}
-          className={`${
-            hero ? "ms-hero-cell-img" : "ms-cell-photo"
-          } absolute inset-0 w-full h-full object-cover`}
-          draggable={false}
-        />
-      )}
-      {children && <div className="relative z-10 max-w-full">{children}</div>}
-    </div>
   );
 }
