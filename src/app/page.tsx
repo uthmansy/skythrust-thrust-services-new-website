@@ -6,6 +6,7 @@ import CapabilitiesSection from "@/components/CapabilitiesSection";
 import MaintenanceSpectrum from "@/components/MaintenanceSpectrum";
 import StrategicFootprint from "@/components/StrategicFootprint";
 import SparesGrid from "@/components/SparesGrid";
+import CharterSection from "@/components/CharterSection";
 
 export default function Home() {
   return (
@@ -27,6 +28,7 @@ export default function Home() {
       {/* Renders its own <section> at 500vh — no <Scene> wrapper */}
       <MaintenanceSpectrum />
       <SparesGrid />
+      <CharterSection />
 
       <Scene id="footprint" z={5}>
         <StrategicFootprint />

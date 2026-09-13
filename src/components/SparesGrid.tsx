@@ -363,7 +363,7 @@ export default function SparesGrid() {
       });
 
       /* ---- EXIT ---- */
-      const nextSection = document.getElementById("footprint");
+      const nextSection = document.getElementById("charter");
       if (nextSection) {
         const exitTl = gsap.timeline({ paused: true });
 
