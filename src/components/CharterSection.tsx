@@ -9,6 +9,9 @@ gsap.registerPlugin(ScrollTrigger);
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
+/* ============================================================
+   DATA
+   ============================================================ */
 const CHAPTERS = [
   {
     numeral: "I",
@@ -19,101 +22,122 @@ const CHAPTERS = [
       {
         n: "01",
         title: "On-Demand Private Charter",
+        meta: "Global",
         desc: "Fully customized point-to-point flights departing on your schedule. A meticulously vetted network of light, mid-size, super-mid, and heavy jets, plus turboprops for regional accessibility.",
       },
       {
         n: "02",
         title: "Corporate Shuttle & Block Hour",
+        meta: "Enterprise",
         desc: "Predictable aviation solutions for enterprise clients. Optimized routing and block-hour agreements guarantee aircraft availability while maximizing budget efficiency.",
       },
       {
         n: "03",
         title: "Empty Leg Management",
+        meta: "On-Demand",
         desc: "Exclusive access to discounted repositioning flights. Continuous fleet monitoring to surface premium aircraft availability at significantly reduced rates.",
       },
       {
         n: "04",
         title: "Specialized & Humanitarian",
+        meta: "Priority",
         desc: "Rapid deployment for Air Ambulance and Medevac with advanced life-support modules, plus secure, discreet transport for government and high-profile VIPs.",
       },
     ],
   },
   {
     numeral: "II",
-    title: "Bespoke Passenger Experience",
+    title: "Bespoke Experience",
     intro:
-      "Every variable managed. Every detail considered — from the first inquiry to post-flight follow-up.",
+      "Every variable managed. Every detail considered — from first inquiry to post-flight follow-up.",
     items: [
       {
         n: "01",
         title: "Dedicated Flight Concierge",
-        desc: "A single, 24/7 point of contact. Complex multi-leg itineraries, visa coordination, and pet travel logistics — managed end-to-end.",
+        meta: "24/7",
+        desc: "A single, always-on point of contact. Complex multi-leg itineraries, visa coordination, and pet travel logistics — managed end-to-end.",
       },
       {
         n: "02",
         title: "Ground Handling & FBO Access",
+        meta: "FBO",
         desc: "Bypass commercial terminal congestion. Exclusive private FBO access, fast-track immigration and customs, private security, and luxury ground transport direct to the tarmac.",
       },
       {
         n: "03",
         title: "Bespoke Catering & Amenities",
+        meta: "Curated",
         desc: "Culinary experiences curated to your exact preferences. Michelin-standard catering, rare vintage selections, custom dietary requirements, cabin florals.",
       },
       {
         n: "04",
         title: "Absolute Privacy & Security",
+        meta: "NDA",
         desc: "Discretion is our default. Crew trained in confidentiality protocols, secure communications, NDA-backed operations, and threat assessments for sensitive routes.",
       },
     ],
   },
   {
     numeral: "III",
-    title: "Network & Destination Reach",
+    title: "Network Reach",
     intro:
       "From Lagos to London. Every airspace understood. Every runway within reach.",
     items: [
       {
         n: "01",
         title: "Domestic Excellence",
+        meta: "05 Hubs",
         desc: "Hourly departures connecting Lagos, Abuja, Port Harcourt, Kano, and other major Nigerian hubs with zero commercial delays.",
       },
       {
         n: "02",
         title: "West African Regional Network",
+        meta: "06 Cities",
         desc: "Direct, efficient access to Accra, Freetown, Monrovia, Dakar, Cotonou, and Douala — navigating complex regional airspace with localized expertise.",
       },
       {
         n: "03",
         title: "Global Intercontinental Reach",
+        meta: "4 Continents",
         desc: "Seamless connections to London, Dubai, Johannesburg, and New York, supported by comprehensive overflight and landing permit management.",
       },
     ],
   },
 ];
 
+const PANELS = [
+  { label: "00 / PROLOGUE" },
+  { label: "01 / SERVICE" },
+  { label: "02 / EXPERIENCE" },
+  { label: "03 / NETWORK" },
+  { label: "04 / ADVANTAGE" },
+];
+
+const PANEL_COUNT = PANELS.length;
+const PANEL_WINDOW = 1 / PANEL_COUNT;
+
+const CERTS = ["NCAA", "EASA", "FAA", "IBAC", "IS-BAO", "ARGUS"];
+
+const clamp01 = (t: number) => Math.max(0, Math.min(1, t));
 const smoothstep = (t: number, a: number, b: number) => {
-  const x = Math.max(0, Math.min(1, (t - a) / (b - a)));
+  const x = clamp01((t - a) / (b - a));
   return x * x * (3 - 2 * x);
 };
 
-const PANEL_COUNT = 5;
-const PANEL_WINDOW = 1 / PANEL_COUNT;
-
-const TOKENS =
-  ".ch-eyebrow, .ch-headline-line, .ch-body, .ch-label, .ch-chapter-title, .ch-chapter-intro, .ch-num, .ch-item-title, .ch-item-desc, .ch-closing-el";
-
+/* ============================================================
+   BACKDROP
+   ============================================================ */
 function CharterBackdrop() {
   return (
     <div className="charter-backdrop-group absolute inset-0">
+      {/* LIGHT */}
       <div className="charter-bg-light absolute inset-0">
-        <div className="absolute inset-0 bg-[#F5EDE0]" />
+        <div className="absolute inset-0 bg-[#EFE7D9]" />
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 opacity-60"
           style={{
-            backgroundImage: `
-              linear-gradient(rgba(15,23,42,0.08) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(15,23,42,0.08) 1px, transparent 1px)
-            `,
+            backgroundImage:
+              "linear-gradient(rgba(20,15,10,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(20,15,10,0.05) 1px, transparent 1px)",
             backgroundSize: "80px 80px",
           }}
         />
@@ -121,20 +145,19 @@ function CharterBackdrop() {
           className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse 70% 55% at 50% 45%, rgba(251,191,36,0.18) 0%, transparent 65%)",
+              "radial-gradient(ellipse 60% 45% at 20% 75%, rgba(217,119,6,0.18) 0%, transparent 65%), radial-gradient(ellipse 55% 50% at 95% 15%, rgba(251,191,36,0.16) 0%, transparent 55%)",
           }}
         />
       </div>
 
+      {/* DARK */}
       <div className="charter-bg-dark absolute inset-0">
-        <div className="absolute inset-0 bg-[#0a0705]" />
+        <div className="absolute inset-0 bg-[#08060a]" />
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage: `
-              linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)
-            `,
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
             backgroundSize: "80px 80px",
           }}
         />
@@ -142,49 +165,27 @@ function CharterBackdrop() {
           className="charter-glow-core absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse 70% 55% at 50% 45%, rgba(251,191,36,0.22) 0%, rgba(217,119,6,0.10) 35%, transparent 72%)",
+              "radial-gradient(ellipse 55% 45% at 50% 45%, rgba(251,146,60,0.16) 0%, rgba(180,83,9,0.06) 40%, transparent 72%)",
           }}
         />
         <div
           className="absolute inset-x-0 bottom-0 h-[55%]"
           style={{
             background:
-              "radial-gradient(ellipse 90% 100% at 50% 100%, rgba(120,53,15,0.35) 0%, transparent 75%)",
+              "radial-gradient(ellipse 90% 100% at 50% 100%, rgba(120,53,15,0.26) 0%, transparent 70%)",
           }}
         />
-        <div
-          className="absolute inset-x-0 top-0 h-[35%]"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 100%)",
-          }}
-        />
-        <div
-          className="absolute inset-y-0 left-0 w-[22%]"
-          style={{
-            background:
-              "linear-gradient(to right, rgba(0,0,0,0.45) 0%, transparent 100%)",
-          }}
-        />
-        <div
-          className="absolute inset-y-0 right-0 w-[22%]"
-          style={{
-            background:
-              "linear-gradient(to left, rgba(0,0,0,0.45) 0%, transparent 100%)",
-          }}
-        />
-        {Array.from({ length: 16 }).map((_, i) => (
+        {Array.from({ length: 10 }).map((_, i) => (
           <span
             key={i}
             className="absolute rounded-full"
             style={{
               width: i % 3 === 0 ? "3px" : "2px",
               height: i % 3 === 0 ? "3px" : "2px",
-              left: `${5 + ((i * 13) % 90)}%`,
+              left: `${4 + ((i * 23) % 92)}%`,
               bottom: "-6px",
-              background: "rgba(251,191,36,0.55)",
-              filter: "blur(0.5px)",
-              animation: `charterDrift ${16 + (i % 6) * 3}s linear ${i * 1.1}s infinite`,
+              background: "rgba(251,146,60,0.5)",
+              animation: `charterDrift ${22 + (i % 5) * 4}s linear ${i * 1.7}s infinite`,
             }}
           />
         ))}
@@ -193,232 +194,415 @@ function CharterBackdrop() {
   );
 }
 
+/* ============================================================
+   HUD
+   ============================================================ */
 function CharterHUD() {
   return (
     <div
-      className="charter-hud-fade absolute inset-0 pointer-events-none z-20"
+      className="charter-hud absolute inset-0 pointer-events-none z-30"
       style={{ mixBlendMode: "difference" }}
     >
-      <div className="charter-corner absolute top-6 left-6 w-5 h-5 border-l border-t border-white/70" />
-      <div className="charter-corner absolute top-6 right-6 w-5 h-5 border-r border-t border-white/70" />
-      <div className="charter-corner absolute bottom-6 left-6 w-5 h-5 border-l border-b border-white/70" />
-      <div className="charter-corner absolute bottom-6 right-6 w-5 h-5 border-r border-b border-white/70" />
+      <div className="charter-corner absolute top-5 left-5 w-4 h-4 border-l border-t border-white/70" />
+      <div className="charter-corner absolute top-5 right-5 w-4 h-4 border-r border-t border-white/70" />
+      <div className="charter-corner absolute bottom-5 left-5 w-4 h-4 border-l border-b border-white/70" />
+      <div className="charter-corner absolute bottom-5 right-5 w-4 h-4 border-r border-b border-white/70" />
 
-      <div className="charter-hud-el absolute top-8 left-16 right-16 flex items-center justify-between font-mono text-[9px] md:text-[10px] uppercase tracking-[0.35em] text-white/75">
-        <span className="hidden md:inline">{"// 06. Private Charter"}</span>
-        <span className="md:hidden">{"// 06. Charter"}</span>
-        <span className="flex items-center gap-3">
-          <span
-            className="w-1 h-1 rounded-full bg-white"
-            style={{ animation: "charterBlink 2.2s ease-in-out infinite" }}
-          />
-          <span data-hud-alt>10,500 FT</span>
+      <div className="charter-hud-el absolute top-6 left-12 right-12 flex items-center justify-between font-mono text-[9px] md:text-[10px] uppercase tracking-[0.35em] text-white/80">
+        <span>{"// 06. Private Charter"}</span>
+        <span className="flex items-center gap-2.5">
+          <span className="relative flex h-1 w-1">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-75 animate-ping" />
+            <span className="relative inline-flex rounded-full h-1 w-1 bg-white" />
+          </span>
+          <span data-hud-state>GROUND</span>
         </span>
       </div>
 
-      <div className="charter-hud-el absolute bottom-8 left-16 right-16 flex items-center justify-between font-mono text-[9px] md:text-[10px] uppercase tracking-[0.35em] text-white/60">
-        <span className="hidden md:inline">N 6°27' / E 3°23'</span>
-        <span className="md:hidden">6°27'N</span>
-        <span data-hud-cycle>01 / 05</span>
-      </div>
-
-      <div className="charter-hud-el hidden md:flex absolute left-6 top-1/2 -translate-y-1/2 flex-col gap-6">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <span
-            key={i}
-            className="block w-2 h-px bg-white/40"
-            style={{
-              animation: `charterBlink ${3 + i * 0.4}s ease-in-out infinite`,
-            }}
-          />
-        ))}
-      </div>
-
-      <div className="charter-hud-el hidden md:flex absolute right-6 top-1/2 -translate-y-1/2 flex-col gap-6">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <span
-            key={i}
-            className="block w-2 h-px bg-white/40"
-            style={{
-              animation: `charterBlink ${3 + i * 0.4}s ease-in-out infinite`,
-            }}
-          />
-        ))}
-      </div>
-
-      <div className="charter-hud-el absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-        <div className="w-6 h-px bg-white/25" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-px h-6 bg-white/25" />
-      </div>
-
-      <div className="charter-hud-el hidden md:block absolute bottom-16 right-16 w-14 h-14 rounded-full border border-white/20">
-        <div className="absolute inset-1 rounded-full border border-white/10" />
-        <div
-          className="absolute inset-0 rounded-full"
-          style={{
-            background:
-              "conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.35) 40deg, transparent 60deg)",
-            animation: "charterRadar 5s linear infinite",
-          }}
-        />
-      </div>
-
-      <div className="charter-hud-el absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-        <div
-          className="relative w-[46vh] h-[46vh]"
-          style={{ animation: "charterOrbit 32s linear infinite" }}
-        >
-          <span className="charter-dot absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white/70" />
-          <span className="charter-dot absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white/40" />
-          <span className="charter-dot absolute top-1/2 right-0 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-white/60" />
-        </div>
-      </div>
-
-      <div className="charter-hud-el hidden md:block absolute inset-y-0 left-0 w-full pointer-events-none">
-        <div
-          className="absolute top-0 bottom-0 w-px bg-white/15"
-          style={{ animation: "charterScan 12s ease-in-out infinite" }}
-        />
+      <div className="charter-hud-el absolute bottom-6 left-12 right-12 flex items-center justify-between font-mono text-[9px] md:text-[10px] uppercase tracking-[0.35em] text-white/55">
+        <span data-hud-coords>N 6°27' / E 3°23'</span>
+        <span data-hud-panel>00 / 04</span>
       </div>
     </div>
   );
 }
 
-function CharterPanels({ mode }: { mode: "mobile" | "desktop" }) {
-  const panelClass =
-    mode === "mobile"
-      ? "charter-panel relative min-h-screen flex items-center px-5 py-24"
-      : "charter-panel absolute inset-0 flex items-center px-16 py-24";
-
+/* ============================================================
+   MASKED HEADLINE
+   ============================================================ */
+function MaskedLine({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <>
-      <div className={panelClass}>
-        <div className="w-full max-w-6xl mx-auto">
-          <p className="ch-eyebrow font-mono text-[10px] md:text-xs uppercase tracking-[0.4em] text-[#92400E] mb-6 md:mb-8">
-            {"// 06. Private Charter"}
-          </p>
+    <span className="block overflow-hidden pb-[0.12em] pt-[0.02em]">
+      <span className={`ch-mask-line block will-change-transform ${className}`}>
+        {children}
+      </span>
+    </span>
+  );
+}
 
-          <h2 className="font-display text-[12vw] md:text-[5vw] leading-[1.1] uppercase tracking-[-0.03em] text-[#1a1410] max-w-4xl">
-            <span className="block overflow-hidden pb-[0.15em] pt-[0.05em]">
-              <span className="ch-headline-line block will-change-transform">
-                Flying,
-              </span>
-            </span>
-            <span className="block overflow-hidden pb-[0.15em] pt-[0.05em]">
-              <span className="ch-headline-line block will-change-transform">
-                elevated to
-              </span>
-            </span>
-            <span className="block overflow-hidden pb-[0.15em] pt-[0.05em]">
-              <span className="ch-headline-line block text-[#B45309] will-change-transform">
-                an art form.
-              </span>
-            </span>
+/* ============================================================
+   IMAGE FRAME — no base position class so caller controls it
+   ============================================================ */
+function ImageFrame({
+  src,
+  alt,
+  caption,
+  className = "",
+}: {
+  src: string;
+  alt: string;
+  caption?: string;
+  className?: string;
+}) {
+  return (
+    <div className={`ch-image-frame overflow-hidden ${className}`}>
+      <img
+        src={src}
+        alt={alt}
+        draggable={false}
+        loading="eager"
+        className="ch-image-inner absolute inset-0 w-full h-full object-cover will-change-transform"
+      />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(to top, rgba(0,0,0,0.42) 0%, transparent 45%)",
+        }}
+      />
+      <div className="absolute top-3 left-3 w-3.5 h-3.5 border-t border-l border-white/60 z-10" />
+      <div className="absolute top-3 right-3 w-3.5 h-3.5 border-t border-r border-white/60 z-10" />
+      <div className="absolute bottom-3 left-3 w-3.5 h-3.5 border-b border-l border-white/60 z-10" />
+      <div className="absolute bottom-3 right-3 w-3.5 h-3.5 border-b border-r border-white/60 z-10" />
+      {caption && (
+        <div className="ch-fade absolute bottom-4 left-4 z-10 flex items-center gap-2">
+          <span className="w-1 h-1 rounded-full bg-[#F59E0B]" />
+          <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-white/90">
+            {caption}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   PANEL 0 — OPENING
+   ============================================================ */
+function PanelOpening() {
+  return (
+    <div className="charter-panel relative min-h-[92svh] md:absolute md:inset-0 md:min-h-0 md:grid md:grid-cols-12">
+      {/* Content column */}
+      <div className="md:col-span-7 flex flex-col justify-between px-6 md:px-16 py-14 md:py-20 gap-8 md:gap-0">
+        <div className="ch-eyebrow flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.4em] text-[#92400E]">
+          <span>{"// 06. Private Charter"}</span>
+          <span className="hidden md:inline opacity-60">N 6°27' / E 3°23'</span>
+        </div>
+
+        <div className="md:max-w-[46rem]">
+          <h2 className="font-display font-bold text-[14vw] md:text-[6.4vw] leading-[0.9] tracking-[-0.055em] uppercase text-[#1a1410]">
+            <MaskedLine>Flying,</MaskedLine>
+            <MaskedLine>elevated</MaskedLine>
+            <MaskedLine>to an</MaskedLine>
+            <MaskedLine className="italic text-[#B45309]">art form.</MaskedLine>
           </h2>
+        </div>
 
-          <div className="mt-10 md:mt-14 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-16 max-w-4xl">
-            <p className="ch-body font-sans text-[13.5px] md:text-[15.5px] leading-relaxed text-[#3f342a]/85">
-              Sky Thrust redefines private aviation in West Africa by merging
-              uncompromising safety with bespoke, white-glove luxury. We do not
-              simply book flights — we curate sovereign, frictionless travel
-              experiences.
-            </p>
-            <p className="ch-body font-sans text-[13.5px] md:text-[15.5px] leading-relaxed text-[#3f342a]/85">
-              Because our charter operations are backed by our own elite MRO
-              engineering division, we offer technical oversight and safety
-              assurance that independent brokers cannot match.
-            </p>
+        <div className="grid grid-cols-1 md:grid-cols-[1.6fr_1fr] gap-6 md:gap-14 items-start">
+          <p className="ch-fade font-sans text-[13.5px] md:text-[14.5px] leading-[1.65] text-[#3f342a]/80 max-w-md">
+            Sky Thrust redefines private aviation in West Africa — merging
+            uncompromising safety with bespoke, white-glove luxury.
+          </p>
+          <div className="ch-fade flex flex-col gap-3">
+            <div className="flex items-baseline gap-3 border-t border-[#1a1410]/15 pt-3">
+              <span className="font-display font-bold text-[26px] md:text-[30px] leading-none tracking-[-0.03em] text-[#1a1410] tabular-nums">
+                14
+              </span>
+              <span className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.28em] text-[#3f342a]/60">
+                Aircraft types
+              </span>
+            </div>
+            <div className="flex items-baseline gap-3 border-t border-[#1a1410]/15 pt-3">
+              <span className="font-display font-bold text-[26px] md:text-[30px] leading-none tracking-[-0.03em] text-[#1a1410] tabular-nums">
+                24/7
+              </span>
+              <span className="font-mono text-[9px] md:text-[10px] uppercase tracking-[0.28em] text-[#3f342a]/60">
+                Flight desk
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {CHAPTERS.map((chapter) => (
-        <div key={chapter.numeral} className={panelClass}>
-          <div className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14">
-            <div className="md:col-span-4">
-              <div className="flex items-center gap-4 mb-5 md:mb-6">
-                <span className="ch-label font-mono text-[10px] uppercase tracking-[0.4em] text-[#F59E0B]/90 whitespace-nowrap">
-                  Chapter {chapter.numeral}
-                </span>
-                <span className="ch-rule flex-1 h-px bg-white/15 will-change-transform" />
-              </div>
-              <h3 className="font-display text-[9vw] md:text-[2.5vw] leading-[1.2] tracking-[-0.02em] uppercase text-white overflow-hidden block">
-                <span className="ch-chapter-title block pb-[0.12em] will-change-transform">
-                  {chapter.title}
-                </span>
-              </h3>
-              <p className="ch-chapter-intro mt-5 md:mt-6 font-sans text-[13px] md:text-[14px] leading-relaxed text-white/55 max-w-sm">
-                {chapter.intro}
-              </p>
+      {/* Image column */}
+      <div className="md:col-span-5 relative h-[55vh] md:h-full overflow-hidden">
+        <ImageFrame
+          src="/assets/jets/jet-landing.webp"
+          alt="Business jet on final approach"
+          caption="Approach / Runway 18L"
+          className="absolute inset-0"
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   PANEL 1-3 — CHAPTERS
+   ============================================================ */
+function PanelChapter({
+  chapter,
+  variant,
+  image,
+  imageCaption,
+}: {
+  chapter: (typeof CHAPTERS)[number];
+  variant: "default" | "mirror" | "fullbleed";
+  image: string;
+  imageCaption: string;
+}) {
+  if (variant === "fullbleed") {
+    return (
+      <div className="charter-panel relative min-h-[92svh] md:absolute md:inset-0 md:min-h-0">
+        <div className="absolute inset-0">
+          <ImageFrame
+            src={image}
+            alt={chapter.title}
+            caption={imageCaption}
+            className="absolute inset-0"
+          />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(to right, rgba(6,4,8,0.95) 0%, rgba(6,4,8,0.82) 42%, rgba(6,4,8,0.25) 78%, rgba(6,4,8,0.1) 100%)",
+            }}
+          />
+        </div>
+
+        <div className="relative h-full grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12 px-6 md:px-16 py-14 md:py-20 items-center">
+          <div className="md:col-span-5 flex flex-col justify-center">
+            <div className="ch-eyebrow flex items-center gap-4 mb-5 md:mb-6">
+              <span className="font-mono text-[10px] uppercase tracking-[0.4em] text-[#F59E0B]">
+                Chapter {chapter.numeral}
+              </span>
+              <span className="ch-rule flex-1 h-px bg-[#F59E0B]/60 origin-left" />
             </div>
 
-            <div className="md:col-span-8">
+            <h3 className="font-display font-bold text-[11vw] md:text-[3vw] leading-[1] tracking-[-0.035em] uppercase text-white mb-4 md:mb-6">
+              <MaskedLine>{chapter.title}</MaskedLine>
+            </h3>
+
+            <p className="ch-fade font-sans text-[13px] md:text-[14px] leading-[1.6] text-white/65 max-w-md mb-8 md:mb-12">
+              {chapter.intro}
+            </p>
+
+            <div className="flex flex-col">
               {chapter.items.map((item) => (
                 <div
                   key={item.n}
-                  className="ch-item border-t border-white/12 py-5 md:py-6 grid grid-cols-[auto_1fr] gap-x-5 md:gap-x-10"
+                  className="ch-fade grid grid-cols-[auto_1fr_auto] gap-4 md:gap-6 border-t border-white/12 py-4 items-baseline"
                 >
-                  <span className="ch-num font-mono text-[10px] uppercase tracking-[0.3em] text-[#F59E0B]/85 pt-1.5 will-change-transform">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#F59E0B]">
                     {item.n}
                   </span>
-                  <div>
-                    <h4 className="font-display text-[5.5vw] md:text-[1.55vw] font-medium leading-[1.3] text-white/95 mb-2 tracking-[-0.01em] overflow-hidden block">
-                      <span className="ch-item-title block pb-[0.1em] will-change-transform">
-                        {item.title}
-                      </span>
+                  <div className="min-w-0">
+                    <h4 className="font-display font-bold text-[14px] md:text-[16px] tracking-[-0.01em] mb-1.5 uppercase text-white/95">
+                      {item.title}
                     </h4>
-                    <p className="ch-item-desc font-sans text-[12.5px] md:text-[13.5px] leading-relaxed text-white/50 max-w-2xl">
+                    <p className="font-sans text-[11.5px] md:text-[12.5px] leading-[1.55] text-white/50 max-w-lg">
                       {item.desc}
                     </p>
                   </div>
+                  <span className="font-mono text-[9px] uppercase tracking-[0.28em] text-white/40 whitespace-nowrap hidden md:inline">
+                    {item.meta}
+                  </span>
                 </div>
               ))}
               <div className="border-t border-white/12" />
             </div>
           </div>
         </div>
-      ))}
+      </div>
+    );
+  }
 
-      <div className={panelClass}>
-        <div className="w-full max-w-4xl mx-auto text-center">
-          <p className="ch-closing-el font-mono text-[10px] md:text-xs uppercase tracking-[0.4em] text-[#F59E0B]/90 mb-8 md:mb-10">
-            The Sky Thrust Advantage
-          </p>
+  const isMirror = variant === "mirror";
 
-          <h3 className="font-display text-[9vw] md:text-[3.4vw] leading-[1.2] tracking-[-0.03em] text-white/95 max-w-3xl mx-auto">
-            <span className="block overflow-hidden pb-[0.15em] pt-[0.05em]">
-              <span className="ch-closing-el block will-change-transform">
-                Not just a luxury seat.
+  return (
+    <div className="charter-panel relative min-h-[92svh] md:absolute md:inset-0 md:min-h-0 md:grid md:grid-cols-12">
+      {/* Chapter info — 3 cols */}
+      <div
+        className={`md:col-span-3 relative flex flex-col justify-center px-6 md:px-16 py-10 md:py-20 order-1 ${
+          isMirror ? "md:order-3" : "md:order-1"
+        }`}
+      >
+        {/* Watermark numeral, bleeding off the edge */}
+        <div className="ch-numeral-mark absolute top-6 -left-4 md:top-10 md:-left-8 pointer-events-none select-none">
+          <span
+            className="font-display font-bold text-white/[0.05] leading-[0.75]"
+            style={{ fontSize: "clamp(160px, 26vw, 380px)" }}
+          >
+            {chapter.numeral}
+          </span>
+        </div>
+
+        <div className="ch-eyebrow flex items-center gap-4 mb-5 md:mb-6">
+          <span className="font-mono text-[10px] uppercase tracking-[0.4em] text-[#F59E0B]">
+            Chapter {chapter.numeral}
+          </span>
+          <span className="ch-rule flex-1 h-px bg-[#F59E0B]/60 origin-left" />
+        </div>
+
+        <h3 className="font-display font-bold text-[9vw] md:text-[2.2vw] leading-[1] tracking-[-0.035em] uppercase text-white mb-4 md:mb-5">
+          {chapter.title.split(" ").map((w, i) => (
+            <MaskedLine key={i}>{w}</MaskedLine>
+          ))}
+        </h3>
+
+        <p className="ch-fade font-sans text-[12.5px] md:text-[13.5px] leading-[1.6] text-white/55 max-w-sm">
+          {chapter.intro}
+        </p>
+      </div>
+
+      {/* Items — 5 cols */}
+      <div className="md:col-span-5 flex flex-col justify-center px-6 md:px-0 py-10 md:py-20 order-3 md:order-2">
+        <div className="flex flex-col">
+          {chapter.items.map((item) => (
+            <div
+              key={item.n}
+              className="ch-fade grid grid-cols-[auto_1fr_auto] gap-4 md:gap-5 border-t border-white/12 py-3.5 md:py-4 items-baseline"
+            >
+              <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#F59E0B]">
+                {item.n}
               </span>
-            </span>
-            <span className="block overflow-hidden pb-[0.15em] pt-[0.05em]">
-              <span className="ch-closing-el block text-[#F59E0B] will-change-transform">
-                A flight engineered for absolute safety.
+              <div className="min-w-0">
+                <h4 className="font-display font-bold text-[14px] md:text-[15px] tracking-[-0.01em] mb-1 uppercase text-white/95">
+                  {item.title}
+                </h4>
+                <p className="font-sans text-[11.5px] md:text-[12px] leading-[1.55] text-white/50 max-w-xl">
+                  {item.desc}
+                </p>
+              </div>
+              <span className="font-mono text-[9px] uppercase tracking-[0.28em] text-white/40 whitespace-nowrap hidden md:inline">
+                {item.meta}
               </span>
-            </span>
-          </h3>
-
-          <p className="ch-closing-el font-sans text-[13.5px] md:text-[15px] leading-relaxed text-white/55 max-w-2xl mx-auto mt-8 md:mt-10">
-            Unlike traditional charter brokers, Sky Thrust is an
-            engineering-first organization. Every aircraft in our network
-            undergoes in-house technical auditing — from maintenance records to
-            physical inspections to crew training — all validated against our
-            internal MRO standards.
-          </p>
-
-          <div className="ch-closing-el mt-12 md:mt-16 flex items-center justify-center gap-5 md:gap-8 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.35em] text-white/35">
-            <span>NCAA</span>
-            <span className="w-1 h-1 rounded-full bg-[#F59E0B]/50" />
-            <span>EASA</span>
-            <span className="w-1 h-1 rounded-full bg-[#F59E0B]/50" />
-            <span>FAA</span>
-          </div>
+            </div>
+          ))}
+          <div className="border-t border-white/12" />
         </div>
       </div>
+
+      {/* Image — 4 cols */}
+      <div
+        className={`md:col-span-4 relative h-[42vh] md:h-full overflow-hidden order-2 ${
+          isMirror ? "md:order-1" : "md:order-3"
+        }`}
+      >
+        <ImageFrame
+          src={image}
+          alt={chapter.title}
+          caption={imageCaption}
+          className="absolute inset-0"
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   PANEL 4 — CLOSING
+   ============================================================ */
+function PanelClosing() {
+  return (
+    <div className="charter-panel relative min-h-[92svh] md:absolute md:inset-0 md:min-h-0 flex flex-col justify-between px-6 md:px-16 py-14 md:py-20">
+      <div className="ch-eyebrow flex items-center gap-4">
+        <span className="font-mono text-[10px] uppercase tracking-[0.4em] text-[#F59E0B]">
+          The Sky Thrust Advantage
+        </span>
+        <span className="ch-rule flex-1 h-px bg-[#F59E0B]/40 origin-left" />
+      </div>
+
+      <div className="flex-1 flex flex-col justify-center items-center text-center">
+        <h3 className="font-display font-bold text-[9.5vw] md:text-[3.6vw] leading-[1.08] tracking-[-0.035em] text-white/95 max-w-5xl">
+          <MaskedLine>Not just a luxury seat.</MaskedLine>
+          <MaskedLine className="text-[#F59E0B]">
+            A flight engineered for absolute safety.
+          </MaskedLine>
+        </h3>
+
+        <p className="ch-fade font-sans text-[13px] md:text-[14.5px] leading-[1.7] text-white/55 max-w-2xl mt-7 md:mt-10">
+          Unlike traditional charter brokers, Sky Thrust is an engineering-first
+          organization. Every aircraft in our network undergoes in-house
+          technical auditing — from maintenance records to physical inspections
+          to crew training — all validated against our internal MRO standards.
+        </p>
+      </div>
+
+      <div className="ch-marquee relative overflow-hidden">
+        <div className="flex whitespace-nowrap font-mono text-[10px] md:text-[11px] uppercase tracking-[0.4em] text-white/45">
+          {[0, 1].map((dup) => (
+            <div
+              key={dup}
+              className="flex shrink-0 items-center"
+              style={{ animation: "charterMarquee 24s linear infinite" }}
+            >
+              {CERTS.map((c, i) => (
+                <span
+                  key={`${dup}-${i}`}
+                  className="flex items-center gap-8 pr-8"
+                >
+                  <span>{c}</span>
+                  <span className="w-1 h-1 rounded-full bg-[#F59E0B]/60" />
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   ALL PANELS
+   ============================================================ */
+function CharterPanels() {
+  return (
+    <>
+      <PanelOpening />
+      <PanelChapter
+        chapter={CHAPTERS[0]}
+        variant="default"
+        image="/assets/jets/jet-engine.webp"
+        imageCaption="Engine Bay / CFM LEAP-1A"
+      />
+      <PanelChapter
+        chapter={CHAPTERS[1]}
+        variant="mirror"
+        image="/assets/jets/jet-wing-portrait-mode.webp"
+        imageCaption="Wing Root / FL 410"
+      />
+      <PanelChapter
+        chapter={CHAPTERS[2]}
+        variant="fullbleed"
+        image="/assets/jets/jet-landing.webp"
+        imageCaption="Runway 18L / Cleared to Land"
+      />
+      <PanelClosing />
     </>
   );
 }
 
+/* ============================================================
+   MAIN
+   ============================================================ */
 export default function CharterSection() {
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -429,291 +613,212 @@ export default function CharterSection() {
     let mm: ReturnType<typeof gsap.matchMedia> | null = null;
 
     const ctx = gsap.context(() => {
+      /* ---------- Builders ---------- */
       const buildEnter = (panel: HTMLElement, fast = false) => {
-        const s = fast ? 0.65 : 1;
+        const s = fast ? 0.7 : 1;
         const tl = gsap.timeline({ defaults: { ease: "expo.out" } });
 
-        const eyebrow = panel.querySelector(".ch-eyebrow");
-        const headlineLines = panel.querySelectorAll(".ch-headline-line");
-        const label = panel.querySelector(".ch-label");
-        const rule = panel.querySelector(".ch-rule");
-        const chapterTitle = panel.querySelector(".ch-chapter-title");
-        const chapterIntro = panel.querySelector(".ch-chapter-intro");
-        const bodies = panel.querySelectorAll(".ch-body");
-        const items = panel.querySelectorAll(".ch-item");
-        const nums = panel.querySelectorAll(".ch-num");
-        const itemTitles = panel.querySelectorAll(".ch-item-title");
-        const itemDescs = panel.querySelectorAll(".ch-item-desc");
-        const closingEls = panel.querySelectorAll(".ch-closing-el");
+        const imageFrame = panel.querySelector<HTMLElement>(".ch-image-frame");
+        const imageInner = panel.querySelector<HTMLElement>(".ch-image-inner");
+        const lines = panel.querySelectorAll(".ch-mask-line");
+        const fades = panel.querySelectorAll(".ch-fade");
+        const rules = panel.querySelectorAll(".ch-rule");
+        const numeral = panel.querySelector<HTMLElement>(".ch-numeral-mark");
+        const eyebrow = panel.querySelector<HTMLElement>(".ch-eyebrow");
+        const marquee = panel.querySelector<HTMLElement>(".ch-marquee");
 
+        if (imageFrame) {
+          tl.fromTo(
+            imageFrame,
+            { clipPath: "inset(0% 0% 100% 0%)" },
+            { clipPath: "inset(0% 0% 0% 0%)", duration: 1.2 * s },
+            0
+          );
+        }
+        if (imageInner) {
+          tl.fromTo(
+            imageInner,
+            { scale: 1.16 },
+            { scale: 1, duration: 1.6 * s },
+            0
+          );
+        }
         if (eyebrow) {
           tl.fromTo(
             eyebrow,
-            { clipPath: "inset(0 100% 0 0)", opacity: 0, x: -16 },
-            {
-              clipPath: "inset(0 0% 0 0)",
-              opacity: 1,
-              x: 0,
-              duration: 0.85 * s,
-            },
-            0
-          );
-        }
-        if (headlineLines.length) {
-          tl.fromTo(
-            headlineLines,
-            {
-              yPercent: 115,
-              opacity: 0,
-              rotateX: -28,
-              transformOrigin: "50% 100%",
-              transformPerspective: 900,
-            },
-            {
-              yPercent: 0,
-              opacity: 1,
-              rotateX: 0,
-              duration: 1.1 * s,
-              stagger: 0.09 * s,
-            },
-            0.12
-          );
-        }
-        if (bodies.length) {
-          tl.fromTo(
-            bodies,
-            { y: 34, opacity: 0 },
-            {
-              y: 0,
-              opacity: 1,
-              duration: 0.85 * s,
-              stagger: 0.12 * s,
-              ease: "power3.out",
-            },
-            0.5
-          );
-        }
-        if (label) {
-          tl.fromTo(
-            label,
-            { x: -20, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.55 * s, ease: "power3.out" },
-            0
-          );
-        }
-        if (rule) {
-          tl.fromTo(
-            rule,
-            { scaleX: 0, transformOrigin: "left center" },
-            { scaleX: 1, duration: 0.85 * s },
+            { opacity: 0, x: -18 },
+            { opacity: 1, x: 0, duration: 0.7 * s },
             0.05
           );
         }
-        if (chapterTitle) {
+        if (numeral) {
           tl.fromTo(
-            chapterTitle,
-            {
-              yPercent: 105,
-              opacity: 0,
-              rotateX: -20,
-              transformOrigin: "50% 100%",
-              transformPerspective: 900,
-            },
-            { yPercent: 0, opacity: 1, rotateX: 0, duration: 1.0 * s },
+            numeral,
+            { opacity: 0, x: -40 },
+            { opacity: 1, x: 0, duration: 1.2 * s },
+            0.1
+          );
+        }
+        if (lines.length) {
+          tl.fromTo(
+            lines,
+            { yPercent: 115, opacity: 0 },
+            { yPercent: 0, opacity: 1, duration: 1.05 * s, stagger: 0.08 * s },
             0.15
           );
         }
-        if (chapterIntro) {
+        if (rules.length) {
           tl.fromTo(
-            chapterIntro,
-            { y: 22, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.7 * s, ease: "power3.out" },
-            0.45
+            rules,
+            { scaleX: 0 },
+            { scaleX: 1, duration: 0.9 * s, stagger: 0.1 },
+            0.3
           );
         }
-        if (nums.length) {
+        if (fades.length) {
           tl.fromTo(
-            nums,
-            { x: -20, opacity: 0 },
-            {
-              x: 0,
-              opacity: 1,
-              duration: 0.55 * s,
-              stagger: 0.09 * s,
-              ease: "power3.out",
-            },
-            0.55
+            fades,
+            { opacity: 0, y: 22 },
+            { opacity: 1, y: 0, duration: 0.75 * s, stagger: 0.055 * s },
+            0.5
           );
         }
-        if (itemTitles.length) {
+        if (marquee) {
           tl.fromTo(
-            itemTitles,
-            {
-              yPercent: 95,
-              opacity: 0,
-              rotateX: -16,
-              transformOrigin: "50% 100%",
-              transformPerspective: 900,
-            },
-            {
-              yPercent: 0,
-              opacity: 1,
-              rotateX: 0,
-              duration: 0.8 * s,
-              stagger: 0.09 * s,
-            },
-            0.58
-          );
-        }
-        if (itemDescs.length) {
-          tl.fromTo(
-            itemDescs,
-            { y: 20, opacity: 0 },
-            {
-              y: 0,
-              opacity: 1,
-              duration: 0.6 * s,
-              stagger: 0.09 * s,
-              ease: "power3.out",
-            },
-            0.65
-          );
-        }
-        if (items.length) {
-          tl.fromTo(
-            items,
-            { borderTopColor: "rgba(255,255,255,0)" },
-            {
-              borderTopColor: "rgba(255,255,255,0.12)",
-              duration: 0.55 * s,
-              stagger: 0.09 * s,
-              ease: "power2.out",
-            },
-            0.55
-          );
-        }
-        if (closingEls.length) {
-          tl.fromTo(
-            closingEls,
-            {
-              y: 40,
-              opacity: 0,
-              rotateX: -20,
-              transformOrigin: "50% 100%",
-              transformPerspective: 900,
-            },
-            {
-              y: 0,
-              opacity: 1,
-              rotateX: 0,
-              duration: 0.95 * s,
-              stagger: 0.15 * s,
-            },
-            0.08
+            marquee,
+            { opacity: 0 },
+            { opacity: 1, duration: 0.8 * s },
+            0.7
           );
         }
         return tl;
       };
 
-      const buildExit = (panel: HTMLElement, fast = false) => {
-        const s = fast ? 0.6 : 1;
+      const buildExit = (panel: HTMLElement) => {
         const tl = gsap.timeline({ defaults: { ease: "power2.in" } });
-        const tokens = panel.querySelectorAll(TOKENS);
+        const lines = panel.querySelectorAll(".ch-mask-line");
+        const fades = panel.querySelectorAll(".ch-fade");
         const rules = panel.querySelectorAll(".ch-rule");
-        const items = panel.querySelectorAll(".ch-item");
+        const imageFrame = panel.querySelector<HTMLElement>(".ch-image-frame");
+        const numeral = panel.querySelector<HTMLElement>(".ch-numeral-mark");
+        const eyebrow = panel.querySelector<HTMLElement>(".ch-eyebrow");
 
-        tl.to(
-          tokens,
-          {
-            opacity: 0,
-            scale: 0.96,
-            duration: 0.5 * s,
-            stagger: { each: 0.012 * s, from: "end" },
-          },
-          0
-        );
+        if (lines.length) {
+          tl.to(
+            lines,
+            {
+              yPercent: -115,
+              opacity: 0,
+              duration: 0.55,
+              stagger: { each: 0.035, from: "end" },
+            },
+            0
+          );
+        }
+        if (fades.length) {
+          tl.to(
+            fades,
+            {
+              opacity: 0,
+              y: -14,
+              duration: 0.4,
+              stagger: { each: 0.018, from: "end" },
+            },
+            0
+          );
+        }
+        if (eyebrow) tl.to(eyebrow, { opacity: 0, x: 18, duration: 0.4 }, 0);
+        if (numeral) tl.to(numeral, { opacity: 0, x: 20, duration: 0.5 }, 0);
         if (rules.length) {
           tl.to(
             rules,
-            { scaleX: 0, transformOrigin: "right center", duration: 0.5 * s },
+            { scaleX: 0, transformOrigin: "right center", duration: 0.5 },
             0
           );
         }
-        if (items.length) {
+        if (imageFrame) {
           tl.to(
-            items,
-            {
-              borderTopColor: "rgba(255,255,255,0)",
-              duration: 0.5 * s,
-              stagger: { each: 0.02 * s, from: "end" },
-            },
-            0
+            imageFrame,
+            { clipPath: "inset(0% 0% 100% 0%)", duration: 0.7 },
+            0.15
           );
         }
-        tl.set(tokens, {
-          y: 0,
-          x: 0,
-          yPercent: 0,
-          rotateX: 0,
-          scale: 1,
-          opacity: 0,
-          clipPath: "none",
-        });
         return tl;
       };
 
-      const resetPanelTokens = (panel: HTMLElement) => {
-        gsap.set(panel.querySelectorAll(TOKENS), { opacity: 0 });
-        gsap.set(panel.querySelectorAll(".ch-item"), {
-          borderTopColor: "rgba(255,255,255,0)",
+      const resetPanel = (panel: HTMLElement) => {
+        gsap.set(panel.querySelectorAll(".ch-mask-line"), {
+          yPercent: 115,
+          opacity: 0,
         });
+        gsap.set(panel.querySelectorAll(".ch-fade"), { opacity: 0, y: 22 });
+        gsap.set(panel.querySelectorAll(".ch-rule"), {
+          scaleX: 0,
+          transformOrigin: "left center",
+        });
+        gsap.set(panel.querySelectorAll(".ch-eyebrow"), { opacity: 0, x: -18 });
+        gsap.set(panel.querySelector(".ch-numeral-mark"), {
+          opacity: 0,
+          x: -40,
+        });
+        gsap.set(panel.querySelector(".ch-marquee"), { opacity: 0 });
+        gsap.set(panel.querySelector(".ch-image-frame"), {
+          clipPath: "inset(0% 0% 100% 0%)",
+        });
+        gsap.set(panel.querySelector(".ch-image-inner"), { scale: 1.16 });
       };
 
+      /* ---------- Initial state ---------- */
       gsap.set(".charter-corner", { opacity: 0, scale: 0.9 });
       gsap.set(".charter-hud-el", { opacity: 0 });
-      gsap.set(".charter-dot", { scale: 0, opacity: 0 });
       gsap.set(".charter-bg-light", { opacity: 1 });
       gsap.set(".charter-bg-dark", { opacity: 0 });
       gsap.set(".charter-glow-core", { opacity: 0.3, scale: 1 });
       gsap.set(".charter-backdrop-group", { opacity: 1 });
+      gsap.set(".charter-hud", { opacity: 0 });
 
       section
         .querySelectorAll<HTMLElement>(".charter-panel")
-        .forEach(resetPanelTokens);
+        .forEach(resetPanel);
 
-      const setHudAlt = (text: string) => {
-        section
-          .querySelectorAll<HTMLElement>("[data-hud-alt]")
-          .forEach((el) => {
-            el.textContent = text;
-          });
+      /* ---------- HUD updaters ---------- */
+      const setHud = (selector: string, text: string) => {
+        section.querySelectorAll<HTMLElement>(selector).forEach((el) => {
+          if (el.textContent !== text) el.textContent = text;
+        });
       };
-      const setHudCycle = (text: string) => {
-        section
-          .querySelectorAll<HTMLElement>("[data-hud-cycle]")
-          .forEach((el) => {
-            el.textContent = text;
-          });
-      };
+
       const applyBackdrop = (p: number) => {
-        /* Tight transition window — completes in ~6% of pin scroll (~300ms) */
-        const darkP = smoothstep(p, 0.16, 0.22);
+        const darkP = smoothstep(p, 0.14, 0.22);
         gsap.set(".charter-bg-light", { opacity: 1 - darkP });
         gsap.set(".charter-bg-dark", { opacity: darkP });
         gsap.set(".charter-glow-core", {
           opacity: 0.3 + darkP * 0.7,
-          scale: 1 + darkP * 0.15,
+          scale: 1 + darkP * 0.12,
         });
-        setHudAlt(
-          `${Math.round(10500 + darkP * 27500 + p * 8000).toLocaleString()} FT`
+        const state =
+          p < 0.16
+            ? "GROUND"
+            : p < 0.38
+              ? "PREFLIGHT"
+              : p < 0.62
+                ? "IN FLIGHT"
+                : p < 0.86
+                  ? "EN ROUTE"
+                  : "TOUCHDOWN";
+        setHud("[data-hud-state]", state);
+        setHud(
+          "[data-hud-coords]",
+          `ALT ${Math.round(10500 + darkP * 27500 + p * 8000).toLocaleString()} FT`
         );
       };
 
+      /* ============================================================
+         MATCHMEDIA
+         ============================================================ */
       mm = gsap.matchMedia();
 
-      /* ==========================================================
-         MOBILE
-         ========================================================== */
+      /* ---------- MOBILE ---------- */
       mm.add("(max-width: 767px)", () => {
         const panels = Array.from(
           section.querySelectorAll<HTMLElement>(
@@ -723,63 +828,58 @@ export default function CharterSection() {
 
         gsap.set(".charter-corner", { opacity: 1, scale: 1 });
         gsap.set(".charter-hud-el", { opacity: 1 });
-        gsap.set(".charter-dot", { scale: 1, opacity: 1 });
+        gsap.set(".charter-hud", { opacity: 1 });
 
-        const revealTriggers = panels.map((panel, i) => {
+        const triggers = panels.map((panel, i) => {
           return ScrollTrigger.create({
             trigger: panel,
             start: "top 78%",
             onEnter: () => {
-              resetPanelTokens(panel);
+              resetPanel(panel);
               buildEnter(panel, i === 0).play();
             },
             onEnterBack: () => {
-              resetPanelTokens(panel);
+              resetPanel(panel);
               buildEnter(panel, i === 0).play();
             },
           });
         });
 
-        /* Backdrop morph + end-of-section clear */
-        const driverTrigger = ScrollTrigger.create({
+        const driver = ScrollTrigger.create({
           trigger: section,
           start: "top top",
           end: "bottom bottom",
           onUpdate: (self) => {
-            const p = self.progress;
-            applyBackdrop(p);
-            const idx = Math.min(PANEL_COUNT - 1, Math.floor(p * PANEL_COUNT));
-            setHudCycle(`0${idx + 1} / 0${PANEL_COUNT}`);
+            applyBackdrop(self.progress);
+            const idx = Math.min(
+              PANEL_COUNT - 1,
+              Math.floor(self.progress * PANEL_COUNT + 0.0001)
+            );
+            setHud("[data-hud-panel]", PANELS[idx].label);
           },
         });
 
-        /* EXPLICIT EXIT — fade HUD + backdrop as the section's bottom
-           approaches the viewport bottom. This guarantees the stage
-           clears even if sticky doesn't release on its own. */
-        const exitTrigger = ScrollTrigger.create({
+        const exit = ScrollTrigger.create({
           trigger: section,
           start: "bottom 95%",
-          end: "bottom 30%",
+          end: "bottom 40%",
           scrub: 0.4,
           onUpdate: (self) => {
-            const e = self.progress;
-            gsap.set(".charter-hud-fade", { opacity: 1 - e });
-            gsap.set(".charter-backdrop-group", { opacity: 1 - e });
+            gsap.set(".charter-hud", { opacity: 1 - self.progress });
+            gsap.set(".charter-backdrop-group", { opacity: 1 - self.progress });
           },
         });
 
         return () => {
-          revealTriggers.forEach((t) => t.kill());
-          driverTrigger.kill();
-          exitTrigger.kill();
-          gsap.set(".charter-hud-fade", { opacity: 1 });
+          triggers.forEach((t) => t.kill());
+          driver.kill();
+          exit.kill();
+          gsap.set(".charter-hud", { opacity: 1 });
           gsap.set(".charter-backdrop-group", { opacity: 1 });
         };
       });
 
-      /* ==========================================================
-         DESKTOP
-         ========================================================== */
+      /* ---------- DESKTOP ---------- */
       mm.add("(min-width: 768px)", () => {
         const panels = Array.from(
           section.querySelectorAll<HTMLElement>(
@@ -787,17 +887,15 @@ export default function CharterSection() {
           )
         );
 
-        gsap.set(".charter-backdrop-group", { opacity: 1 });
-
         panels.forEach((p) => {
-          resetPanelTokens(p);
+          resetPanel(p);
           gsap.set(p, { opacity: 0, pointerEvents: "none" });
         });
 
-        let panel0Revealed = false;
-        const revealIntro = () => {
-          if (panel0Revealed) return;
-          panel0Revealed = true;
+        let revealed = false;
+        const revealFirst = () => {
+          if (revealed) return;
+          revealed = true;
           gsap.to(".charter-corner", {
             opacity: 1,
             scale: 1,
@@ -811,30 +909,26 @@ export default function CharterSection() {
             stagger: 0.05,
             ease: "power3.out",
           });
-          gsap.to(".charter-dot", {
-            scale: 1,
-            opacity: 1,
-            duration: 0.7,
-            stagger: 0.12,
-            ease: "back.out(1.5)",
-          });
+          gsap.to(".charter-hud", { opacity: 1, duration: 0.8 });
           gsap.set(panels[0], { opacity: 1, pointerEvents: "auto" });
           buildEnter(panels[0]).play();
         };
 
         const introTrigger = ScrollTrigger.create({
           trigger: section,
-          start: "top 70%",
-          onEnter: revealIntro,
-          onEnterBack: () => {
-            if (!panel0Revealed) revealIntro();
-          },
+          start: "top 75%",
+          onEnter: revealFirst,
+          onEnterBack: revealFirst,
         });
+
+        if (section.getBoundingClientRect().top < window.innerHeight * 0.75) {
+          revealFirst();
+        }
 
         let activeIdx = 0;
         let transitionTl: gsap.core.Timeline | null = null;
 
-        const driverTrigger = ScrollTrigger.create({
+        const driver = ScrollTrigger.create({
           trigger: section,
           start: "top top",
           end: "bottom bottom",
@@ -847,9 +941,9 @@ export default function CharterSection() {
               PANEL_COUNT - 1,
               Math.floor(p / PANEL_WINDOW + 0.0001)
             );
-            setHudCycle(`0${targetIdx + 1} / 0${PANEL_COUNT}`);
+            setHud("[data-hud-panel]", PANELS[targetIdx].label);
 
-            if (panel0Revealed && targetIdx !== activeIdx) {
+            if (revealed && targetIdx !== activeIdx) {
               const prev = activeIdx;
               activeIdx = targetIdx;
 
@@ -861,7 +955,7 @@ export default function CharterSection() {
               const prevPanel = panels[prev];
               const nextPanel = panels[targetIdx];
 
-              resetPanelTokens(nextPanel);
+              resetPanel(nextPanel);
               gsap.set(nextPanel, { opacity: 1, pointerEvents: "auto" });
 
               panels.forEach((pnl, i) => {
@@ -876,28 +970,27 @@ export default function CharterSection() {
                   transitionTl = null;
                 },
               });
-
-              tl.add(buildExit(prevPanel, true));
-              tl.to({}, { duration: 0.06 });
+              tl.add(buildExit(prevPanel));
+              tl.to({}, { duration: 0.04 });
               tl.add(buildEnter(nextPanel, true));
               transitionTl = tl;
             }
 
-            const clearP = smoothstep(p, 0.94, 1);
-            gsap.set(".charter-hud-fade", { opacity: 1 - clearP });
+            const clearP = smoothstep(p, 0.95, 1);
+            gsap.set(".charter-hud", { opacity: 1 - clearP * 0.85 });
           },
         });
 
-        const footprint = document.getElementById("footprint");
+        const nextSection = document.getElementById("brokerage");
         let exitTrigger: ScrollTrigger | null = null;
-        if (footprint) {
+        if (nextSection) {
           exitTrigger = ScrollTrigger.create({
-            trigger: footprint,
+            trigger: nextSection,
             start: "top 95%",
             end: "top 55%",
             scrub: 0.5,
             onUpdate: (self) => {
-              gsap.set(".charter-hud-fade", { opacity: 1 - self.progress });
+              gsap.set(".charter-hud", { opacity: 1 - self.progress });
               gsap.set(".charter-backdrop-group", {
                 opacity: 1 - self.progress,
               });
@@ -907,7 +1000,7 @@ export default function CharterSection() {
 
         return () => {
           introTrigger.kill();
-          driverTrigger.kill();
+          driver.kill();
           exitTrigger?.kill();
           if (transitionTl) {
             transitionTl.kill();
@@ -923,6 +1016,9 @@ export default function CharterSection() {
     };
   }, []);
 
+  /* ============================================================
+     RENDER
+     ============================================================ */
   return (
     <section
       ref={sectionRef}
@@ -930,29 +1026,50 @@ export default function CharterSection() {
       className="relative w-full"
       style={{ zIndex: 6 }}
     >
-      {/* ============ MOBILE TREE ============ */}
+      {/* ============ MOBILE ============ */}
       <div className="md:hidden relative">
-        <div className="overflow-hidden sticky top-0 h-screen z-0 pointer-events-none">
+        <div className="sticky top-0 h-[92svh] overflow-hidden z-0 pointer-events-none">
           <CharterBackdrop />
           <CharterHUD />
         </div>
-        <div className="relative -mt-[100vh] z-10" data-panel-set="mobile">
-          <CharterPanels mode="mobile" />
+        <div className="relative -mt-[92svh] z-10" data-panel-set="mobile">
+          <CharterPanels />
         </div>
       </div>
 
-      {/* ============ DESKTOP TREE ============ */}
-      <div className="hidden md:block relative h-[380vh]">
-        <div className="sticky top-0 h-screen overflow-hidden">
+      {/* ============ DESKTOP ============ */}
+      <div className="hidden md:block relative h-[500vh]">
+        <div className="sticky top-0 h-[100dvh] overflow-hidden">
           <CharterBackdrop />
           <CharterHUD />
           <div className="absolute inset-0 z-10" data-panel-set="desktop">
-            <CharterPanels mode="desktop" />
+            <CharterPanels />
           </div>
         </div>
       </div>
 
       <style jsx global>{`
+        .ch-mask-line {
+          will-change: transform, opacity;
+        }
+        .ch-numeral-mark {
+          will-change: opacity, transform;
+        }
+        .ch-image-frame {
+          will-change: clip-path;
+        }
+        .ch-image-inner {
+          will-change: transform;
+        }
+
+        @keyframes charterMarquee {
+          from {
+            transform: translateX(0);
+          }
+          to {
+            transform: translateX(-100%);
+          }
+        }
         @keyframes charterDrift {
           0% {
             transform: translateY(0) translateX(0) scale(1);
@@ -971,47 +1088,6 @@ export default function CharterSection() {
           100% {
             transform: translateY(-110vh) translateX(18px) scale(0.8);
             opacity: 0;
-          }
-        }
-        @keyframes charterRadar {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-        @keyframes charterOrbit {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-        @keyframes charterScan {
-          0% {
-            transform: translateX(-10vw);
-            opacity: 0;
-          }
-          15% {
-            opacity: 0.55;
-          }
-          85% {
-            opacity: 0.55;
-          }
-          100% {
-            transform: translateX(110vw);
-            opacity: 0;
-          }
-        }
-        @keyframes charterBlink {
-          0%,
-          100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.2;
           }
         }
       `}</style>

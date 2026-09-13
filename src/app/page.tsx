@@ -7,6 +7,7 @@ import MaintenanceSpectrum from "@/components/MaintenanceSpectrum";
 import StrategicFootprint from "@/components/StrategicFootprint";
 import SparesGrid from "@/components/SparesGrid";
 import CharterSection from "@/components/CharterSection";
+import BrokerageSection from "@/components/BrokerageSection";
 
 export default function Home() {
   return (
@@ -29,6 +30,7 @@ export default function Home() {
       <MaintenanceSpectrum />
       <SparesGrid />
       <CharterSection />
+      <BrokerageSection />
 
       <Scene id="footprint" z={5}>
         <StrategicFootprint />
