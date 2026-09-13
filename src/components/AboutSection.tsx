@@ -36,13 +36,13 @@ export default function AboutSection() {
     if (!el) return;
 
     const ctx = gsap.context(() => {
-      // Marquee infinite loops
+      // Marquee infinite loops — faster
       const trackA = trackARef.current;
       const trackB = trackBRef.current;
       if (trackA) {
         gsap.to(trackA, {
           xPercent: -50,
-          duration: 45,
+          duration: 22,
           ease: "none",
           repeat: -1,
         });
@@ -51,7 +51,7 @@ export default function AboutSection() {
         gsap.fromTo(
           trackB,
           { xPercent: -50 },
-          { xPercent: 0, duration: 60, ease: "none", repeat: -1 }
+          { xPercent: 0, duration: 30, ease: "none", repeat: -1 }
         );
       }
 
@@ -221,7 +221,7 @@ export default function AboutSection() {
         onLeaveBack: () => enterTl.reverse(),
       });
 
-      // EXIT trigger — fires the instant capabilities enters the viewport
+      // EXIT trigger
       const next = document.getElementById("capabilities");
       if (next) {
         let exitActive = false;
@@ -265,17 +265,18 @@ export default function AboutSection() {
         </p>
       </div>
 
-      <div className="about-marquee-top -mx-5 md:-mx-10 overflow-hidden border-y border-[var(--color-ink-primary)]/10 py-2 md:py-4 will-change-transform">
+      {/* MARQUEE — generous vertical padding + line-height so glyphs don't clip */}
+      <div className="about-marquee-top -mx-5 md:-mx-10 overflow-hidden border-y border-[var(--color-ink-primary)]/10 py-4 md:py-6 will-change-transform">
         <div
           ref={trackARef}
-          className="flex whitespace-nowrap will-change-transform"
+          className="flex items-center whitespace-nowrap will-change-transform"
         >
           {[0, 1, 2, 3].map((copy) => (
-            <div key={copy} className="flex shrink-0">
+            <div key={copy} className="flex shrink-0 items-center">
               {MARQUEE_WORDS.map((word, idx) => (
                 <span
                   key={`${copy}-${idx}`}
-                  className="font-display font-bold uppercase tracking-[-0.035em] text-[14vw] md:text-[10vw] leading-[0.9] pr-[5vw]"
+                  className="font-display font-bold uppercase tracking-[-0.035em] text-[13vw] md:text-[9vw] leading-[1.1] pr-[5vw] block"
                   style={{
                     color:
                       idx % 2 === 0
@@ -330,7 +331,6 @@ export default function AboutSection() {
       </div>
 
       <div className="mt-auto pt-8 md:pt-10">
-        {/* Extracted so it can be animated in/out */}
         <div className="about-stats-rule h-px bg-[var(--color-ink-primary)]/15 w-full" />
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 md:gap-y-0 pt-5 md:pt-7 pb-8 md:pb-10">

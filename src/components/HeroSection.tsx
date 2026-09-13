@@ -32,7 +32,7 @@ export default function HeroSection() {
       split = new SplitType(textEl, { types: "lines, words" });
       const words = split.words;
 
-      // ─── PRE-PAINT ────────────────────────────────────────────────
+      // PRE-PAINT
       gsap.set(words, { yPercent: 100, opacity: 0 });
       gsap.set(aircraft, { opacity: 0 });
       gsap.set(".hero-ui", { y: 20, opacity: 0 });
@@ -52,10 +52,10 @@ export default function HeroSection() {
             isDesktop: boolean;
           };
 
-          const startX = isMobile ? "-70vw" : "-55vw";
+          const startX = isMobile ? "-85vw" : "-55vw";
           gsap.set(aircraft, { x: startX });
 
-          // ─── INTRO — paused, gated on preloader:complete ────────
+          // INTRO
           const introTl = gsap.timeline({
             paused: true,
             defaults: { ease: "power3.out" },
@@ -94,7 +94,6 @@ export default function HeroSection() {
               "-=0.6"
             );
 
-          // Gate intro on preloader completion
           const startIntro = () => {
             introTl.progress(0).play();
           };
@@ -107,10 +106,9 @@ export default function HeroSection() {
             });
           }
 
-          // ─── EXIT — paused timeline, fromTo, immediateRender:false ──
+          // EXIT
           const exitTl = gsap.timeline({ paused: true });
 
-          // Beat 1 — Dismissal
           exitTl
             .fromTo(
               words,
@@ -175,7 +173,6 @@ export default function HeroSection() {
               "-=0.3"
             );
 
-          // Beat 2 — Exotic morph
           exitTl
             .fromTo(
               ".hero-scan",
@@ -242,7 +239,6 @@ export default function HeroSection() {
               "<0.1"
             );
 
-          // ─── EXIT TRIGGER — scrubbed, with handoff from intro ────
           const next = document.getElementById("about");
           if (next) {
             ScrollTrigger.create({
@@ -252,9 +248,6 @@ export default function HeroSection() {
               scrub: 1,
               invalidateOnRefresh: true,
               onUpdate: (self) => {
-                // Force-complete intro before exit takes over.
-                // .progress(1).pause() preserves the timeline —
-                // never .kill() (which would destroy it).
                 if (introTl.progress() < 1) {
                   introTl.progress(1).pause();
                 }
@@ -263,7 +256,6 @@ export default function HeroSection() {
             });
           }
 
-          // Cleanup listener if this breakpoint instance unmounts
           return () => {
             window.removeEventListener("preloader:complete", startIntro);
           };
@@ -314,13 +306,13 @@ export default function HeroSection() {
         }}
       />
 
-      {/* HUD CORNER BRACKETS */}
-      <div className="hero-bracket absolute top-20 md:top-28 left-5 md:left-10 w-5 h-5 border-l border-t border-[var(--color-ink-primary)]/30 z-10 pointer-events-none" />
-      <div className="hero-bracket absolute top-20 md:top-28 right-5 md:right-10 w-5 h-5 border-r border-t border-[var(--color-ink-primary)]/30 z-10 pointer-events-none" />
-      <div className="hero-bracket absolute bottom-5 md:bottom-10 left-5 md:left-10 w-5 h-5 border-l border-b border-[var(--color-ink-primary)]/30 z-10 pointer-events-none" />
-      <div className="hero-bracket absolute bottom-5 md:bottom-10 right-5 md:right-10 w-5 h-5 border-r border-b border-[var(--color-ink-primary)]/30 z-10 pointer-events-none" />
+      {/* HUD CORNER BRACKETS — desktop only */}
+      <div className="hero-bracket hidden md:block absolute top-20 md:top-28 left-5 md:left-10 w-5 h-5 border-l border-t border-[var(--color-ink-primary)]/30 z-10 pointer-events-none" />
+      <div className="hero-bracket hidden md:block absolute top-20 md:top-28 right-5 md:right-10 w-5 h-5 border-r border-t border-[var(--color-ink-primary)]/30 z-10 pointer-events-none" />
+      <div className="hero-bracket hidden md:block absolute bottom-5 md:bottom-10 left-5 md:left-10 w-5 h-5 border-l border-b border-[var(--color-ink-primary)]/30 z-10 pointer-events-none" />
+      <div className="hero-bracket hidden md:block absolute bottom-5 md:bottom-10 right-5 md:right-10 w-5 h-5 border-r border-b border-[var(--color-ink-primary)]/30 z-10 pointer-events-none" />
 
-      {/* SIDE META */}
+      {/* SIDE META — desktop only */}
       <div className="hero-meta hidden md:flex flex-col gap-2 absolute left-10 top-1/2 -translate-y-1/2 z-20 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--color-ink-secondary)]/55 pointer-events-none">
         <span>N 25°16&apos;</span>
         <span className="w-8 h-px bg-[var(--color-ink-secondary)]/25" />
@@ -332,10 +324,10 @@ export default function HeroSection() {
         <span>M 0.82</span>
       </div>
 
-      {/* TYPOGRAPHY */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1] px-4 md:px-[8vw]">
+      {/* TYPOGRAPHY — top-anchored on mobile, centered on desktop */}
+      <div className="absolute inset-0 flex items-start md:items-center justify-center pointer-events-none z-[1] px-5 md:px-[8vw] pt-[16vh] md:pt-0">
         <div ref={textRef} className="w-full">
-          <h1 className="font-display text-[17vw] md:text-[14vw] lg:text-[12vw] font-bold leading-[0.82] tracking-[-0.045em] text-[var(--color-ink-primary)] uppercase text-center md:text-left select-none">
+          <h1 className="font-display text-[16vw] md:text-[14vw] lg:text-[12vw] font-bold leading-[0.82] tracking-[-0.045em] text-[var(--color-ink-primary)] uppercase text-center md:text-left select-none">
             Flight
             <br />
             Readiness
@@ -343,19 +335,19 @@ export default function HeroSection() {
         </div>
       </div>
 
-      {/* AIRCRAFT */}
-      <div className="absolute bottom-[14%] md:bottom-[10%] left-0 w-full flex justify-center md:justify-start md:pl-[5vw] z-10 pointer-events-none">
+      {/* AIRCRAFT — bleeds off both edges on mobile, larger and lower */}
+      <div className="absolute bottom-[20%] md:bottom-[10%] left-0 w-full flex justify-center md:justify-start md:pl-[5vw] z-10 pointer-events-none">
         <img
           ref={aircraftRef}
           src="/assets/hero-aircraft-light.webp"
           alt="Sky Thrust Pristine Aircraft"
-          className="w-[115%] md:w-[80%] lg:w-[70%] max-w-none h-auto object-contain drop-shadow-[0_40px_80px_rgba(15,23,42,0.22)] will-change-transform"
+          className="w-[165%] md:w-[80%] lg:w-[70%] max-w-none h-auto object-contain drop-shadow-[0_40px_80px_rgba(15,23,42,0.22)] will-change-transform"
           draggable={false}
         />
       </div>
 
       {/* NAV */}
-      <nav className="hero-ui absolute top-0 left-0 right-0 p-5 md:p-10 flex items-center justify-between z-20 pointer-events-auto">
+      <nav className="hero-ui absolute top-0 left-0 right-0 p-4 md:p-10 flex items-center justify-between z-20 pointer-events-auto">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-[var(--color-ink-primary)] rounded-full flex items-center justify-center">
             <span className="text-white font-bold text-xs tracking-tight">
@@ -391,7 +383,7 @@ export default function HeroSection() {
             Client Portal
           </button>
         </div>
-        <div className="md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--color-ink-primary)]/15 bg-white/40 backdrop-blur-sm">
+        <div className="md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--color-ink-primary)]/15 bg-white/60 backdrop-blur-sm">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-ink-primary)]">
             Live
@@ -399,25 +391,25 @@ export default function HeroSection() {
         </div>
       </nav>
 
-      {/* BOTTOM ACTION BAR */}
-      <div className="hero-ui absolute bottom-0 left-0 right-0 p-5 md:p-10 z-20 flex flex-col md:flex-row items-stretch md:items-end justify-between w-full gap-5 md:gap-6 pointer-events-auto">
+      {/* BOTTOM ACTION BAR — compacted on mobile */}
+      <div className="hero-ui absolute bottom-0 left-0 right-0 px-4 pt-3 pb-5 md:p-10 z-20 flex flex-col md:flex-row items-stretch md:items-end justify-between w-full gap-3 md:gap-6 pointer-events-auto">
         <div className="max-w-md">
-          <p className="font-mono text-[9px] md:text-xs text-[var(--color-amber-accent)] uppercase tracking-[0.25em] mb-2">
+          <p className="font-mono text-[9px] md:text-xs text-[var(--color-amber-accent)] uppercase tracking-[0.25em] mb-1.5 md:mb-2">
             // 01. Premium Aviation MRO
           </p>
-          <p className="font-sans text-[13px] md:text-lg text-[var(--color-ink-secondary)] leading-relaxed">
+          <p className="font-sans text-[12px] md:text-lg text-[var(--color-ink-secondary)] leading-snug md:leading-relaxed">
             Delivering heavy maintenance, advanced component checks, and
             comprehensive parts logistics from our state-of-the-art hangars.
           </p>
         </div>
         <button
           onClick={scrollToNext}
-          className="group relative flex items-center justify-between md:justify-start gap-4 w-full md:w-auto pl-6 md:pl-7 pr-1.5 md:pr-2 py-1.5 md:py-2 bg-[var(--color-ink-primary)] text-white rounded-full overflow-hidden transition-shadow duration-500 hover:shadow-[0_20px_50px_-10px_rgba(15,23,42,0.5)]"
+          className="group relative flex items-center justify-between md:justify-start gap-3 md:gap-4 w-full md:w-auto pl-5 md:pl-7 pr-1.5 md:pr-2 py-1.5 md:py-2 bg-[var(--color-ink-primary)] text-white rounded-full overflow-hidden transition-shadow duration-500 hover:shadow-[0_20px_50px_-10px_rgba(15,23,42,0.5)]"
         >
-          <span className="font-mono text-[11px] md:text-sm uppercase tracking-[0.2em] text-white/95">
+          <span className="font-mono text-[10.5px] md:text-sm uppercase tracking-[0.18em] md:tracking-[0.2em] text-white/95">
             Request Facility Audit
           </span>
-          <div className="w-10 h-10 md:w-8 md:h-8 rounded-full bg-[var(--color-amber-accent)] flex items-center justify-center group-hover:translate-x-0.5 transition-transform duration-300">
+          <div className="w-9 h-9 md:w-8 md:h-8 rounded-full bg-[var(--color-amber-accent)] flex items-center justify-center group-hover:translate-x-0.5 transition-transform duration-300">
             <svg
               className="w-3.5 h-3.5 text-[var(--color-ink-primary)]"
               fill="none"
