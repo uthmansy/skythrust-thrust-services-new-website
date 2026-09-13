@@ -36,13 +36,13 @@ export default function AboutSection() {
     if (!el) return;
 
     const ctx = gsap.context(() => {
-      // Marquee infinite loops — faster
+      // Marquee — faster
       const trackA = trackARef.current;
       const trackB = trackBRef.current;
       if (trackA) {
         gsap.to(trackA, {
           xPercent: -50,
-          duration: 22,
+          duration: 18,
           ease: "none",
           repeat: -1,
         });
@@ -51,11 +51,11 @@ export default function AboutSection() {
         gsap.fromTo(
           trackB,
           { xPercent: -50 },
-          { xPercent: 0, duration: 30, ease: "none", repeat: -1 }
+          { xPercent: 0, duration: 26, ease: "none", repeat: -1 }
         );
       }
 
-      // ENTER timeline
+      // ENTER
       const enterTl = gsap.timeline({
         paused: true,
         defaults: { ease: "power3.out" },
@@ -110,7 +110,7 @@ export default function AboutSection() {
           "-=0.4"
         );
 
-      // EXIT timeline
+      // EXIT
       const exitTl = gsap.timeline({ paused: true });
 
       exitTl
@@ -213,7 +213,6 @@ export default function AboutSection() {
           0.45
         );
 
-      // ENTER trigger
       ScrollTrigger.create({
         trigger: el,
         start: "top 70%",
@@ -221,7 +220,6 @@ export default function AboutSection() {
         onLeaveBack: () => enterTl.reverse(),
       });
 
-      // EXIT trigger
       const next = document.getElementById("capabilities");
       if (next) {
         let exitActive = false;
@@ -265,35 +263,48 @@ export default function AboutSection() {
         </p>
       </div>
 
-      {/* MARQUEE — generous vertical padding + line-height so glyphs don't clip */}
-      <div className="about-marquee-top -mx-5 md:-mx-10 overflow-hidden border-y border-[var(--color-ink-primary)]/10 py-4 md:py-6 will-change-transform">
+      {/*
+        MARQUEE — the outer wrapper has NO overflow rule.
+        The inner grid wrapper uses overflowX: clip (only horizontal clipping)
+        with a generous min-height that's guaranteed larger than the glyph
+        extent, so vertical glyph overflow can never be clipped.
+      */}
+      <div className="about-marquee-top relative -mx-5 md:-mx-10 border-y border-[var(--color-ink-primary)]/10">
         <div
-          ref={trackARef}
-          className="flex items-center whitespace-nowrap will-change-transform"
+          className="grid place-items-center min-h-[22vw] md:min-h-[14vw]"
+          style={{
+            overflowX: "clip",
+            overflowY: "visible",
+          }}
         >
-          {[0, 1, 2, 3].map((copy) => (
-            <div key={copy} className="flex shrink-0 items-center">
-              {MARQUEE_WORDS.map((word, idx) => (
-                <span
-                  key={`${copy}-${idx}`}
-                  className="font-display font-bold uppercase tracking-[-0.035em] text-[13vw] md:text-[9vw] leading-[1.1] pr-[5vw] block"
-                  style={{
-                    color:
-                      idx % 2 === 0
-                        ? "var(--color-ink-primary)"
-                        : "transparent",
-                    WebkitTextStroke:
-                      idx % 2 === 0 ? "0" : "1px rgba(15,23,42,0.35)",
-                  }}
-                >
-                  {word}
-                  <span className="text-[var(--color-amber-accent)] pl-[1vw]">
-                    {"*"}
+          <div
+            ref={trackARef}
+            className="flex items-center whitespace-nowrap will-change-transform"
+          >
+            {[0, 1, 2, 3].map((copy) => (
+              <div key={copy} className="flex shrink-0 items-center">
+                {MARQUEE_WORDS.map((word, idx) => (
+                  <span
+                    key={`${copy}-${idx}`}
+                    className="font-display font-bold uppercase tracking-[-0.035em] text-[12vw] md:text-[8.5vw] leading-none pr-[5vw] inline-block"
+                    style={{
+                      color:
+                        idx % 2 === 0
+                          ? "var(--color-ink-primary)"
+                          : "transparent",
+                      WebkitTextStroke:
+                        idx % 2 === 0 ? "0" : "1px rgba(15,23,42,0.35)",
+                    }}
+                  >
+                    {word}
+                    <span className="text-[var(--color-amber-accent)] pl-[1vw]">
+                      {"*"}
+                    </span>
                   </span>
-                </span>
-              ))}
-            </div>
-          ))}
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
