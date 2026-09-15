@@ -14,8 +14,20 @@ const useIsomorphicLayoutEffect =
    ============================================================ */
 const STATS = [
   { value: 1200, suffix: "+", label: "Aircraft transacted", fmt: "comma" },
-  { value: 2.4, suffix: "B", prefix: "$", label: "Portfolio value", fmt: "decimal" },
-  { value: 4, suffix: "", label: "Phases per transaction", fmt: "plain", pad: true },
+  {
+    value: 2.4,
+    suffix: "B",
+    prefix: "$",
+    label: "Portfolio value",
+    fmt: "decimal",
+  },
+  {
+    value: 4,
+    suffix: "",
+    label: "Phases per transaction",
+    fmt: "plain",
+    pad: true,
+  },
   { value: 100, suffix: "%", label: "Technical oversight", fmt: "plain" },
 ];
 
@@ -118,11 +130,20 @@ export default function BrokerageSection() {
       gsap.set(".bk-phase", { y: 40, opacity: 0 });
       gsap.set(".bk-phase-rule", { scaleX: 0, transformOrigin: "left center" });
       gsap.set(".bk-advantage-line", { yPercent: 105, opacity: 0 });
-      gsap.set(".bk-advantage-rule", { scaleX: 0, transformOrigin: "left center" });
+      gsap.set(".bk-advantage-rule", {
+        scaleX: 0,
+        transformOrigin: "left center",
+      });
       gsap.set(".bk-service", { y: 40, opacity: 0 });
-      gsap.set(".bk-service-rule", { scaleX: 0, transformOrigin: "left center" });
+      gsap.set(".bk-service-rule", {
+        scaleX: 0,
+        transformOrigin: "left center",
+      });
       gsap.set(".bk-closing-line", { yPercent: 110, opacity: 0 });
-      gsap.set(".bk-closing-rule", { scaleX: 0, transformOrigin: "center center" });
+      gsap.set(".bk-closing-rule", {
+        scaleX: 0,
+        transformOrigin: "center center",
+      });
       gsap.set(".bk-corner", { opacity: 0, scale: 0.9 });
       gsap.set(".bk-ticker", { opacity: 0, y: 20 });
 
@@ -330,7 +351,7 @@ export default function BrokerageSection() {
         .to(".bk-ticker", { opacity: 1, y: 0, duration: 0.9 }, "-=0.5");
 
       /* ============ ENTER / EXIT via Next section ============ */
-      const next = document.getElementById("footprint");
+      const next = document.getElementById("credentials");
       if (next) {
         const exitTl = gsap.timeline({ paused: true });
         exitTl.to(
@@ -588,9 +609,7 @@ export default function BrokerageSection() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 md:gap-8">
             {SERVICES.map((svc, i) => {
               const spanClass =
-                svc.size === "large"
-                  ? "lg:col-span-7"
-                  : "lg:col-span-5";
+                svc.size === "large" ? "lg:col-span-7" : "lg:col-span-5";
               return (
                 <article
                   key={svc.n}

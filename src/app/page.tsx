@@ -8,6 +8,7 @@ import StrategicFootprint from "@/components/StrategicFootprint";
 import SparesGrid from "@/components/SparesGrid";
 import CharterSection from "@/components/CharterSection";
 import BrokerageSection from "@/components/BrokerageSection";
+import CredentialsSection from "@/components/CredentialsSection";
 
 export default function Home() {
   return (
@@ -31,6 +32,7 @@ export default function Home() {
       <SparesGrid />
       <CharterSection />
       <BrokerageSection />
+      <CredentialsSection />
 
       <Scene id="footprint" z={5}>
         <StrategicFootprint />
